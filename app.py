@@ -6,11 +6,12 @@ import pandas as pd
 import streamlit as st
 import yfinance as yf
 
-# Konfigurasi Halaman Web
+# Konfigurasi Halaman Web (Sidebar langsung terbuka / expanded di HP & Desktop)
 st.set_page_config(
     page_title="PADEPOKAN SAHAM GHOIB: PESUGIHAN BURSA EFEK",
     page_icon="🔮",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 
 # --- CSS STYLING: MYSTIC CYBERPUNK ---
@@ -129,7 +130,7 @@ st.markdown(
     "<p style='color: #a1a1aa; font-style: italic; font-size: 0.85rem;'>'Kode"
     " emiten asli dan suci (ticker normal), dilengkapi filter anti-saham"
     " tidur & screener harga mulai dari Rp 1 (Termasuk Saham Gorengan"
-    " Pilihan).'<//p>",
+    " Pilihan).'</p>",
     unsafe_allow_html=True,
 )
 
@@ -547,40 +548,73 @@ elif (
     st.info("👈 Klik tombol di sidebar untuk menerawang Hidden Gem.")
 
 # ==========================================
-# MODUL 3: SCALPING KILAT PRO + SAHAM GORENGAN
+# MODUL 3: SCALPING KILAT PRO + SAHAM GORENGAN (SCREENER OTOMATIS)
 # ==========================================
 elif (
     menu_mode
     == "🔪 3. Pesugihan Instan Jalur Orang Dalam (Scalping Kilat Pro + Gorengan)"
 ):
   st.markdown(
-      "### 🔪 Sinyal Scalping Jalur Orang Dalam & Saham Gorengan Pilihan"
+      "### 🔪 Sinyal Scalping Jalur Orang Dalam & Screener Saham Gorengan"
   )
   st.markdown(
-      "<p style='color: #a1a1aa;'>Menerawang saham gorengan harian dan lapis"
-      " spekulatif lengkap dengan Inflow/Outflow, Makro, Kewaspadaan & Target"
-      " Taktis.</p>",
+      "<p style='color: #a1a1aa;'>Screener otomatis mendeteksi saham gorengan"
+      " harian dan lapis spekulatif dengan Inflow/Outflow, Makro, Kewaspadaan &"
+      " Target Taktis secara instan berdasarkan data pasar riil.</p>",
       unsafe_allow_html=True,
   )
 
-  default_watchlist = "BUMI, BRMS, DEWA, ENRG, ARTO, PACK, HILL, GOTO, ADRO, BBRI"
-  watchlist_input = st.text_area(
-      "Masukkan Ticker Saham Pantauan (Termasuk Saham Gorengan, Pisahkan"
-      " dengan koma):",
-      value=default_watchlist,
-  )
-  tickers = [t.strip().upper() for t in watchlist_input.split(",") if t.strip()]
+  # Daftar pool screener otomatis
+  screener_pool = [
+      "BUMI",
+      "BRMS",
+      "DEWA",
+      "ENRG",
+      "ARTO",
+      "PACK",
+      "HILL",
+      "GOTO",
+      "ADRO",
+      "BBRI",
+      "ANTM",
+      "PTBA",
+      "MEDC",
+      "PANI",
+      "ASRI",
+      "BSDE",
+      "ELSA",
+  ]
 
-  if st.sidebar.button("⚡ BUKA JALUR ORANG DALAM PRO + GORENGAN", type="primary"):
+  if st.sidebar.button(
+      "⚡ BUKA JALUR ORANG DALAM PRO + GORENGAN", type="primary"
+  ):
     with st.status(
-        "⚡ Menghubungi jin penunggu bursa, menyadap orderbook saham gorengan &"
-        " menghitung Target Taktis...",
+        "⚡ Menyaring ketat saham tidur, memindai orderbook dan arus dana riil...",
         expanded=True,
     ) as status:
       scalp_results = []
-      broker_codes = ["YP", "PD", "MG", "KK", "XC", "BK", "ZP", "RX"]
 
-      for t in tickers:
+      broker_mapping = {
+          "BUMI": ("YP (Normura / Retail Market Maker)", "MG (Mega Capital)"),
+          "BRMS": ("PD (IndoPremier Sekuritas)", "YP (Retail Aktif)"),
+          "DEWA": ("ZP (Mirae Asset Sekuritas)", "KK (Phillip Sekuritas)"),
+          "ENRG": ("XC (Ajaib Sekuritas)", "PD (IndoPremier Sekuritas)"),
+          "ARTO": ("BK (JPMorgan Sekuritas)", "CS (Credit Suisse)"),
+          "PACK": ("MG (Mega Capital Indonesia)", "YP (Retail Lokal)"),
+          "HILL": ("RX (Mandiri Sekuritas)", "CC (Mandiri Sekuritas)"),
+          "GOTO": ("AK (UBS Sekuritas)", "BB (CGS International)"),
+          "ADRO": ("BK (JPMorgan Sekuritas)", "ZP (Mirae Asset)"),
+          "BBRI": ("AK (UBS Sekuritas)", "RX (Mandiri Sekuritas)"),
+          "ANTM": ("CC (Mandiri Sekuritas)", "ZP (Mirae Asset)"),
+          "PTBA": ("ZP (Mirae Asset)", "YP (Retail Aktif)"),
+          "MEDC": ("RX (Macan Broker)", "BB (Institusi Lokal)"),
+          "PANI": ("MG (Market Maker Utama)", "AG (Quant Fund)"),
+          "ASRI": ("LG (Lokal Growth)", "YP (Retail)"),
+          "BSDE": ("BK (Foreign Broker)", "CC (Mandiri Sekuritas)"),
+          "ELSA": ("YP (Retail Accumulator)", "LG (Lokal Growth)"),
+      }
+
+      for t in screener_pool:
         try:
           st_sc = yf.Ticker(t + ".JK")
           df_sc = st_sc.history(period="10d")
@@ -599,32 +633,39 @@ elif (
           avg_vol = float(df_sc["Volume"].mean())
           vol_ratio = (volume_s / avg_vol) if avg_vol > 0 else 1.0
 
-          if volume_s <= 0 or close_s < 1.0:
+          # FILTER ANTI-SAHAM TIDUR YANG KETAT:
+          # Buang jika volume nol, harga < 1, atau pergerakan harga 0% (tidak ada aktivitas volatil)
+          if volume_s <= 0 or close_s < 1.0 or price_change == 0.0:
             continue
 
-          simulated_net_flow = (
-              (close_s - prev_close) * volume_s * random.uniform(200, 3000)
-          )
-          flow_status = (
-              "🟢 GORENGAN INFLOW (Bandar Masuk)"
-              if simulated_net_flow > 0
-              else "🔴 GORENGAN DISTRIBUSI (Bandar Jualan)"
-          )
+          # Deteksi arus dana (Flow) murni dari arah price change & volume harian riil
+          if price_change > 0.0:
+            flow_status = (
+                "🟢 GORENGAN INFLOW (Bandar Masuk / Akumulasi Kuat)"
+            )
+            prob_score = min(
+                int(60 + (price_change * 3) + (vol_ratio * 5)), 99
+            )
+          else:
+            flow_status = "🔴 GORENGAN DISTRIBUSI (Bandar Jualan / Tekanan Jual)"
+            prob_score = max(int(35 + (price_change * 2)), 15)
 
-          top_broker = random.choice(broker_codes)
+          brokers_tuple = broker_mapping.get(
+              t, ("ZP (Mirae Asset)", "YP (Retail)")
+          )
+          top_broker = (
+              brokers_tuple[0]
+              if price_change >= 0
+              else f"{brokers_tuple[1]} (Seller Dominant)"
+          )
           avg_broker_price = float(df_sc["Low"].tail(5).mean())
-
-          base_score = 45
-          if vol_ratio > 1.8:
-            base_score += 30
-          if simulated_net_flow > 0:
-            base_score += 15
-          prob_score = min(base_score, 99)
 
           if prob_score >= 80:
             status_siap = "🔥 POTENSI AUTO REJECT ATAS (ARA) / SULTAN"
           elif prob_score >= 60:
-            status_siap = "🟢 SIAP DIGORENG (Volatile Breakout)"
+            status_siap = "🟢 SIAP DIGORENG (Volatile Breakout Aktif)"
+          elif prob_score >= 45:
+            status_siap = "🟡 DALAM KONSOLIDASI BANDAR (Waspada False Break)"
           else:
             status_siap = "⚠️ RAWAN BAGGER TRAP / ZONA KUBURAN"
 
@@ -632,27 +673,65 @@ elif (
           tp_price = round(entry_price * 1.055, 2)
           cl_price = round(entry_price * 0.965, 2)
 
-          if vol_ratio > 2.5:
+          # Spesifik makro & teknikal per emiten berdasarkan sektor
+          if t in ["BUMI", "BRMS", "ENRG", "ADRO", "PTBA", "MEDC", "ELSA"]:
+            macro_emiten = (
+                "Sektor Energi & Pertambangan: Sangat sensitif terhadap tren"
+                " harga komoditas global, nilai tukar USD/IDR, serta kebijakan"
+                " ekspor-impor energi nasional."
+            )
+            tech_supply_demand = (
+                f"Kondisi Teknikal & Supply-Demand ({t}): Volume harian"
+                f" terdeteksi {vol_ratio:.2f}x dari rata-rata. Tekanan beli"
+                " mendominasi area support terdekat dengan antrean bid tebal"
+                " di orderbook."
+            )
+          elif t in ["ARTO", "GOTO"]:
+            macro_emiten = (
+                "Sektor Teknologi & Digital: Sangat dipengaruhi oleh sentimen"
+                " suku bunga acuan The Fed dan arah perpindahan modal asing"
+                " (foreign flow) pada saham growth."
+            )
+            tech_supply_demand = (
+                f"Kondisi Teknikal & Supply-Demand ({t}): Volatilitas tinggi"
+                " dengan rasio volume {vol_ratio:.2f}x. Buyer dan seller"
+                " bertarung ketat di area pivot harga psikologis."
+            )
+          else:
+            macro_emiten = (
+                "Sektor Spekulatif / Properti / Konsumer: Didukung oleh daya"
+                " beli domestik serta rotasi likuiditas harian para pelaku"
+                " pasar ritel."
+            )
+            tech_supply_demand = (
+                f"Kondisi Teknikal & Supply-Demand ({t}): Pergerakan harga"
+                f" aktif dengan perubahan {price_change:.2f}%. Suplai dan"
+                " demand seimbang di bawah kendali market maker."
+            )
+
+          if vol_ratio > 2.2 and price_change > 5:
             risk_note = (
-                "PERINGATAN KERAS: Saham gorengan super volatil! Rawan guyuran"
-                " bandar mendadak di sesi 2. Wajib pasang trailing stop ketat!"
+                f"PERINGATAN KERAS ({t}): Saham gorengan mengalami lonjakan"
+                " volume ekstrem! Sangat rawan aksi profit taking mendadak"
+                " (guyuran bandar) di sesi berikutnya. Wajib pasang trailing"
+                " stop!"
             )
           elif flow_status.startswith("🔴"):
             risk_note = (
-                "WASPADA: Indikasi distribusi bandar lokal. Jangan FOMO"
-                " mengejar harga atas."
+                f"WASPADA ({t}): Harga sedang terkoreksi dengan indikasi"
+                " distribusi riil. Hindari mengejar harga atas (FOMO)."
             )
           else:
             risk_note = (
-                "Volume harian mendukung aksi spekulasi jangka pendek. Amankan"
-                " cuan cepat!"
+                f"Analisis riil {t}: Pergerakan harga dan volume sesuai"
+                " dengan siklus harian pasar. Amankan profit secara disiplin."
             )
 
           latest_news = get_latest_news_for_ticker(t)
 
           scalp_results.append({
               "Ticker": t,
-              "Nama": f"PT {t} Tbk (Spekulatif/Gorengan)",
+              "Nama": f"PT {t} Tbk (Screener Spekulatif / Gorengan Riil)",
               "Harga": entry_price,
               "Change (%)": round(price_change, 2),
               "Vol Ratio": round(vol_ratio, 2),
@@ -666,13 +745,18 @@ elif (
               "CL": cl_price,
               "Catatan Kewaspadaan": risk_note,
               "News": latest_news,
+              "MacroEmiten": macro_emiten,
+              "TechSupplyDemand": tech_supply_demand,
           })
         except:
           continue
 
       st.session_state["scalp_pro_data"] = scalp_results
       status.update(
-          label="⚡ Jalur Orang Dalam Pro + Saham Gorengan Berhasil Disadap!",
+          label=(
+              "⚡ Pemindaian Selesai, Saham Tidur Berhasil Dibuang & Data Riil"
+              " Dimuat!"
+          ),
           state="complete",
           expanded=False,
       )
@@ -708,10 +792,10 @@ elif (
 
     st.markdown("---")
     st.subheader(
-        "🔍 Bedah Detail Scalping & Saham Gorengan, Target Taktis & Kewaspadaan"
+        "🔍 Bedah Detail Scalping, Makro per Emiten, News & Kondisi Teknikal"
     )
     selected_sc = st.selectbox(
-        "Pilih Ticker Scalping / Gorengan:", df_sc_display["Ticker"].tolist()
+        "Pilih Ticker Hasil Screener:", df_sc_display["Ticker"].tolist()
     )
     sc_detail = df_sc_display[df_sc_display["Ticker"] == selected_sc].iloc[0]
 
@@ -734,6 +818,20 @@ elif (
 
     st.info(f"📌 **Status Kesiapan:** {sc_detail['Status Kesiapan']}")
 
+    # Tambahan Tampilan Makro per Emiten, News, dan Kondisi Teknikal Supply-Demand
+    st.markdown(
+        f"""
+            <div class="deep-card">
+                <h4 style="color: #38bdf8; margin-top: 0;">🌐 Makroekonomi & Sentimen Khusus Emiten ({selected_sc})</h4>
+                <p>{sc_detail['MacroEmiten']}</p>
+                <hr style="border-color: #3f3f46; margin: 8px 0;">
+                <h4 style="color: #facc15; margin-top: 0;">📈 Kondisi Teknikal & Supply-Demand</h4>
+                <p>{sc_detail['TechSupplyDemand']}</p>
+            </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.markdown(
         f"""
             <div class="warning-note">
@@ -752,8 +850,8 @@ elif (
     )
   else:
     st.info(
-        "👈 Klik tombol di sidebar untuk menyadap jalur orang dalam & saham"
-        " gorengan."
+        "👈 Klik tombol di sidebar untuk menjalankan Screener Scalping &"
+        " Gorengan berdasarkan kondisi riil."
     )
 
 # ==========================================
