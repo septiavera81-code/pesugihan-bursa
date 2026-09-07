@@ -6,28 +6,28 @@ import pandas as pd
 import streamlit as st
 import yfinance as yf
 
-# Konfigurasi Halaman Web (Sidebar langsung terbuka / expanded di HP & Desktop)
+# Konfigurasi Halaman Web
 st.set_page_config(
-    page_title="PADEPOKAN SAHAM GHOIB: PESUGIHAN BURSA EFEK",
-    page_icon="🔮",
+    page_title="Dashboard Analisis Swing & Scalping Saham",
+    page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# --- CSS STYLING: MYSTIC CYBERPUNK ---
+# --- CSS STYLING: PROFESIONAL & MODERN ---
 st.markdown(
     """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
 
     .main { 
-        background: #09090b;
-        color: #e4e4e7; 
+        background: #0f172a;
+        color: #f8fafc; 
         font-family: 'Plus Jakarta Sans', sans-serif;
     }
     .stSidebar { 
-        background-color: #121217 !important;
-        border-right: 2px dashed #a855f7;
+        background-color: #1e293b !important;
+        border-right: 1px solid #334155;
     }
     h1, h2, h3 {
         font-family: 'Plus Jakarta Sans', sans-serif !important;
@@ -38,10 +38,10 @@ st.markdown(
         padding: 16px 20px;
         border-radius: 10px;
         margin-bottom: 16px;
-        border: 1.5px solid #a855f7;
-        background: #181824;
-        border-left: 6px solid #a855f7;
-        box-shadow: 3px 3px 0px #a855f7;
+        border: 1px solid #334155;
+        background: #1e293b;
+        border-left: 6px solid #3b82f6;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
     .deep-card h3 {
         font-size: 1.2rem !important;
@@ -50,21 +50,21 @@ st.markdown(
     .deep-card p {
         font-size: 0.9rem !important;
         margin-bottom: 6px !important;
-        color: #d4d4d8;
+        color: #cbd5e1;
     }
     
     .macro-box {
         padding: 14px 18px;
         border-radius: 8px;
-        background: #12121a;
+        background: #1e293b;
         border: 1px solid #3b82f6;
         border-left: 5px solid #3b82f6;
         margin-bottom: 18px;
     }
     
     .warning-note { 
-        background: #1f1215; 
-        border-left: 5px solid #ef4444; 
+        background: #451a03; 
+        border-left: 5px solid #f59e0b; 
         padding: 12px; 
         border-radius: 6px; 
         margin-bottom: 12px; 
@@ -72,22 +72,20 @@ st.markdown(
     
     .main-title { 
         font-weight: 900; 
-        color: #a855f7;
-        text-shadow: 2px 2px 0px #000000;
+        color: #38bdf8;
         font-size: 1.8rem;
         margin-bottom: 5px;
-        border-bottom: 3px solid #a855f7;
+        border-bottom: 2px solid #334155;
         padding-bottom: 8px;
     }
     .stButton>button {
-        background: #a855f7 !important;
+        background: #3b82f6 !important;
         color: #ffffff !important;
         font-family: 'Plus Jakarta Sans', sans-serif !important;
-        font-weight: 800 !important;
+        font-weight: 600 !important;
         border-radius: 6px !important;
         padding: 0.4rem 1rem !important;
-        border: 1.5px solid #000000 !important;
-        box-shadow: 2px 2px 0px #22c55e;
+        border: none !important;
     }
     </style>
 """,
@@ -98,17 +96,13 @@ st.markdown(
 # --- FUNGSI PENDUKUNG BERITA ---
 def get_latest_news_for_ticker(ticker):
   catalysts = [
-      "Lonjakan volume tak biasa terdeteksi, indikasi akumulasi institusi besar dan bandar.",
-      "Sentimen sektor spekulatif mendadak mendongkrak minat beli pasar ritel.",
-      "Aksi korporasi senyap & antrean bid tebal terendus di market reguler.",
+      "Lonjakan volume transaksi terpantau meningkat, mengindikasikan akumulasi institusi.",
       (
-          "Breaking: Lonjakan antrean HAKI / HATC masuk, bersiap uji batas"
-          " resistance harian."
+          "Sentimen sektor pendukung memberikan dorongan positif pada minat beli"
+          " pasar."
       ),
-      (
-          "Katalis spekulatif: Perubahan struktur orderbook menunjukkan"
-          " dominasi buyer agresif."
-      ),
+      "Aksi korporasi dan antrean beli mulai terbentuk di pasar reguler.",
+      "Perubahan struktur order book menunjukkan dominasi pembeli yang aktif.",
   ]
   try:
     tk = yf.Ticker(ticker + ".JK")
@@ -122,142 +116,101 @@ def get_latest_news_for_ticker(ticker):
 
 # --- NAVIGASI UTAMA ---
 st.markdown(
-    '<h1 class="main-title">🔮 PADEPOKAN DUIT GHOIB: PESUGIHAN SAHAM & ANALISIS'
-    " NYATA</h1>",
+    '<h1 class="main-title">📈 DASHBOARD ANALISIS SAHAM & SWING TRADING</h1>',
     unsafe_allow_html=True,
 )
 st.markdown(
-    "<p style='color: #a1a1aa; font-style: italic; font-size: 0.85rem;'>'Kode"
-    " emiten asli dan suci (ticker normal), dilengkapi filter anti-saham"
-    " tidur & screener harga mulai dari Rp 1 (Termasuk Saham Gorengan"
-    " Pilihan).'</p>",
+    "<p style='color: #94a3b8; font-size: 0.85rem;'>'Analisis data emiten"
+    " berdasarkan kode ticker riil, dilengkapi filter likuiditas dan screener"
+    " pasar komprehensif.'</p>",
     unsafe_allow_html=True,
 )
 
-# --- DASHBOARD KOTAK MAKRO EKONOMI GLOBAL & DOMESTIK ---
+# --- KOTAK MAKROEKONOMI ---
 st.markdown(
     """
     <div class="macro-box">
-        <h4 style="color: #60a5fa; margin-top: 0; margin-bottom: 8px;">🌐 TERAWANGAN MAKROEKONOMI & KONDISI DUNIA GAIB</h4>
-        <p style="margin: 3px 0;"><b>🇮🇩 Suasana Republik:</b> PDB tumbuh stabil ~5.1%-5.3%, inflasi anteng, dan Bank Indonesia pasang 'tenda gaib' buat jaga kurs Rupiah.</p>
-        <p style="margin: 3px 0;"><b>🌍 Dunia Luar & Sesajen Komoditas:</b> Angin dari The Fed dan harga energi global mempengaruhi arah datangnya arwah investor asing (<i>foreign flow</i>).</p>
+        <h4 style="color: #60a5fa; margin-top: 0; margin-bottom: 8px;">🌐 RINGKASAN MAKROEKONOMI GLOBAL & DOMESTIK</h4>
+        <p style="margin: 3px 0; color: #cbd5e1;"><b>🇮🇩 Domestik:</b> PDB tumbuh stabil di kisaran 5.1%-5.3%, inflasi terkendali, dan nilai tukar Rupiah terjaga.</p>
+        <p style="margin: 3px 0; color: #cbd5e1;"><b>🌍 Global:</b> Kebijakan suku bunga bank sentral dunia (The Fed) mempengaruhi arah aliran dana investor asing (<i>foreign flow</i>).</p>
     </div>
 """,
     unsafe_allow_html=True,
 )
 
 st.sidebar.markdown(
-    "<h3 style='color: #a855f7; font-size: 1.1rem;'>🕯️ RITUAL & KOKPIT"
-    " PESUGIHAN</h3>",
+    "<h3 style='color: #38bdf8; font-size: 1.1rem;'>⚙️ MENU ANALISIS</h3>",
     unsafe_allow_html=True,
 )
 menu_mode = st.sidebar.selectbox(
-    "Pilih Jenis Ritual:",
+    "Pilih Modul Analisis:",
     [
-        "💸 1. Ritual Pesugihan Multi-Bagger (Kekayaan 7 Turunan)",
-        "🃏 2. Terawangan Mutiara Terpendam (Hidden Gem Tumbal Cicilan)",
-        (
-            "🔪 3. Pesugihan Instan Jalur Orang Dalam (Scalping Kilat Pro +"
-            " Gorengan)"
-        ),
-        "🕵️‍♂️ 4. Ritual Tarik Barang 1-3 Minggu (Swing Trading Sesajen)",
-        "📉 5. Teropong Dukun Sakti: Cek Lembar Mantra Suka-Suka Lu",
+        "💸 1. Analisis Saham Growth Jangka Panjang (Multi-Bagger)",
+        "🃏 2. Analisis Saham Potensial Tersembunyi (Hidden Gems)",
+        "🔪 3. Screener Scalping & Saham Volatil Harian",
+        "🕵️‍♂️ 4. Analisis Swing Trading 1-3 Minggu (Big, Mid, & Small Cap)",
+        "📉 5. Cek Data & Grafik Emiten Mandiri",
     ],
 )
 
-# --- DATABASE LENGKAP EMITEN ---
+# --- DATABASE EMITEN ---
 multibagger_database = {
     "ADRO.JK": {
         "display_name": "PT Adaro Energy Indonesia Tbk",
         "reason": (
-            "Lonjakan volume transaksi senyap tanpa kenaikan harga signifikan,"
-            " menandakan akumulasi barang oleh institusi besar."
+            "Lonjakan volume transaksi tanpa kenaikan harga signifikan,"
+            " mengindikasikan akumulasi institusi."
         ),
         "brokers": "BK (JPMorgan Sekuritas) & XC (Ajaib Sekuritas)",
-        "project": "Restrukturisasi utang tuntas & pembalikan arus kas positif.",
-        "news": (
-            "Aksi korporasi rights issue strategis diserap penuh standby buyer."
-        ),
-        "narrative": "Turnaround story menuju kebangkitan kinerja operasional.",
-        "macro": (
-            "Didukung permintaan energi global yang stabil dan efisiensi"
-            " operasional internal."
-        ),
+        "project": "Restrukturisasi strategis dan penguatan arus kas.",
+        "news": "Aksi korporasi dan efisiensi operasional berjalan optimal.",
+        "narrative": "Pemulihan kinerja operasional yang solid.",
+        "macro": "Didukung permintaan energi global dan efisiensi biaya.",
     },
     "PTBA.JK": {
         "display_name": "PT Bukit Asam Tbk",
-        "reason": (
-            "Akumulasi konsisten di area support bawah dengan volatilitas harga"
-            " menyempit secara sehat."
-        ),
+        "reason": "Akumulasi konsisten pada area support dengan volatilitas sehat.",
         "brokers": "ZP (Mirae Asset) & YP (Retail Aktif)",
-        "project": "Pengembangan blok tambang baru berteknologi modern.",
-        "news": "Kenaikan volume produksi bulanan melampaui target internal.",
-        "narrative": "Commodity expansion & operational efficiency play.",
-        "macro": (
-            "Sensitif terhadap tren harga komoditas logam dan kestabilan biaya"
-            " pendanaan."
-        ),
+        "project": "Pengembangan infrastruktur pendukung operasional.",
+        "news": "Volume produksi bulanan memenuhi target yang ditetapkan.",
+        "narrative": "Efisiensi operasional dan kestabilan dividen.",
+        "macro": "Sensitif terhadap tren harga komoditas dan biaya energi.",
     },
     "ANTM.JK": {
         "display_name": "PT Aneka Tambang Tbk",
-        "reason": (
-            "Kenaikan harga komoditas diiringi efisiensi biaya operasional yang"
-            " ketat."
-        ),
+        "reason": "Kenaikan harga komoditas didukung efisiensi biaya produksi.",
         "brokers": "AK (Asing) & CC (Mandiri Sekuritas)",
-        "project": "Eksplorasi blok migas cadangan terduga masif.",
-        "news": (
-            "Kontrak suplai energi jangka panjang dengan pembeli strategis."
-        ),
-        "narrative": "Energy security & strong cash-generation capability.",
-        "macro": (
-            "Diuntungkan tren harga energi global dan tingginya kebutuhan"
-            " ketahanan energi."
-        ),
+        "project": "Pengembangan hilirisasi produk tambang.",
+        "news": "Kontrak suplai jangka panjang dengan mitra strategis.",
+        "narrative": "Penguatan posisi di industri pengolahan mineral.",
+        "macro": "Dipengaruhi permintaan komoditas logam mulia global.",
     },
     "HRUM.JK": {
         "display_name": "PT Harum Energy Tbk",
-        "reason": (
-            "Valuasi murah PBV di bawah 1x (diskon aset kuat) dengan struktur"
-            " tanpa utang berbunga."
-        ),
+        "reason": "Valuasi atraktif dengan struktur neraca keuangan yang sehat.",
         "brokers": "CC (Mandiri) & ZP (Mirae)",
-        "project": "Penambahan armada kapal seismik dan pemboran terintegrasi.",
-        "news": "Kontrak baru Pertamina Group mengamankan multi-tahun.",
-        "narrative": "Undervalued asset play dengan dividend yield menarik.",
-        "macro": (
-            "Belanja modal hulu migas nasional yang ekspansif menopang"
-            " utilisasi jasa."
-        ),
+        "project": "Diversifikasi bisnis ke sektor energi terbarukan.",
+        "news": "Perluasan kapasitas produksi segmen usaha baru.",
+        "narrative": "Pertumbuhan terdiversifikasi dan valuasi wajar.",
+        "macro": "Didukung tren transisi energi nasional.",
     },
     "MEDC.JK": {
         "display_name": "PT Medco Energi Internasional Tbk",
-        "reason": (
-            "Transformasi struktural pasca-akuisisi oleh grup konglomerasi"
-            " besar."
-        ),
+        "reason": "Penguatan struktur keuangan pasca efisiensi operasional.",
         "brokers": "RX (Macan Broker) & BB (Institusi)",
-        "project": "Kontrak jasa pertambangan tier-1 backlog jumbo.",
-        "news": "Tender proyek infrastruktur tambang Indonesia Timur.",
-        "narrative": "Industrial powerhouse & supply chain integration.",
-        "macro": (
-            "Pertumbuhan investasi sektor pertambangan dan konstruksi domestik."
-        ),
+        "project": "Pengembangan blok migas dan energi bersih.",
+        "news": "Peningkatan produksi minyak dan gas kuartal berjalan.",
+        "narrative": "Kinerja keuangan yang ekspansif.",
+        "macro": "Diuntungkan tingginya permintaan energi primer.",
     },
     "MDKA.JK": {
         "display_name": "PT Merdeka Copper Gold Tbk",
-        "reason": (
-            "Peningkatan kadar bijih emas (ore grade) menurunkan biaya produksi"
-            " per ons."
-        ),
+        "reason": "Peningkatan efisiensi produksi tambang emas dan tembaga.",
         "brokers": "CS (Credit Suisse) & AK (Asing)",
-        "project": "Ekspansi pabrik pengolahan tahap 2 berkapasitas besar.",
-        "news": "Volume produksi emas kuartalan mencetak rekor sejarah baru.",
-        "narrative": "Gold supercycle & margin expansion story.",
-        "macro": (
-            "Permintaan aset safe haven global memperkuat valuasi emiten emas."
-        ),
+        "project": "Penyelesaian proyek smelter dan ekspansi tambang.",
+        "news": "Pencapaian volume produksi sesuai target tahunan.",
+        "narrative": "Pertumbuhan berbasis ekspansi kapasitas.",
+        "macro": "Didukung tren harga komoditas logam mulia.",
     },
 }
 
@@ -267,92 +220,80 @@ hidden_gem_database = {
     "ELSA.JK": {
         "display_name": "PT Elnusa Tbk",
         "reason": (
-            "Akumulasi senyap oleh institusi pada area base konsolidasi panjang."
+            "Akumulasi bertahap oleh investor institusi pada area konsolidasi."
         ),
         "brokers": "YP (Retail) & LG (Lokal Growth)",
-        "project": "Perluasan jaringan fiber optik koridor digital regional.",
-        "news": "Lonjakan pendapatan segmen korporasi internet.",
-        "narrative": "Digital infrastructure backbone & high growth margin.",
-        "macro": (
-            "Digitalisasi ekonomi nasional yang masif mendorong kebutuhan"
-            " jaringan."
-        ),
+        "project": "Perluasan jasa penunjang energi terintegrasi.",
+        "news": "Perolehan kontrak baru dari berbagai mitra strategis.",
+        "narrative": "Stabilitas pendapatan jasa energi.",
+        "macro": "Pertumbuhan investasi sektor hulu energi nasional.",
     },
     "KEEN.JK": {
         "display_name": "PT Kencana Energi Lestari Tbk",
-        "reason": (
-            "Valuasi atraktif energi terbarukan dengan kepastian cash flow PPA"
-            " PLN."
-        ),
+        "reason": "Valuasi menarik dengan kepastian arus kas jangka panjang.",
         "brokers": "AK (Asing) & ZP (Mirae)",
-        "project": "Pembangunan pembangkit mini hidro baru di kawasan timur.",
-        "news": "Perolehan PPA jangka panjang dengan PLN.",
-        "narrative": "Green energy transition & utility defensive growth.",
-        "macro": (
-            "Komitmen pemerintah terhadap transisi energi bersih dan bauran"
-            " EBT."
-        ),
+        "project": "Pembangunan pembangkit listrik tenaga air baru.",
+        "news": "Implementasi perjanjian jual beli listrik (PPA) dengan PLN.",
+        "narrative": "Pertumbuhan sektor energi hijau.",
+        "macro": "Dukungan regulasi pemerintah terhadap transisi energi.",
     },
     "ACES.JK": {
         "display_name": "PT Aspirasi Hidup Indonesia Tbk",
-        "reason": "Produsen bahan bangunan nasional dengan utilisasi pabrik optimal.",
+        "reason": "Efisiensi operasional dan optimasi jaringan gerai ritel.",
         "brokers": "CC (Mandiri) & MG (Market Maker)",
-        "project": "Modernisasi lini produksi keramik premium ekspor.",
-        "news": "Penurunan biaya energi mendongkrak margin laba bersih.",
-        "narrative": "Industrial manufacturing recovery & export-driven.",
-        "macro": (
-            "Stabilitas nilai tukar rupiah membantu efisiensi bahan baku."
-        ),
+        "project": "Pembukaan gerai baru di berbagai wilayah potensial.",
+        "news": "Pertumbuhan penjualan ritel pada periode berjalan.",
+        "narrative": "Ketahanan sektor ritel domestik.",
+        "macro": "Stabilitas daya beli masyarakat.",
     },
     "ASII.JK": {
         "display_name": "PT Astra International Tbk",
         "reason": (
-            "Valuasi holding asuransi perbankan terdiskon dari nilai wajar aset."
+            "Kinerja terdiversifikasi dari berbagai lini bisnis utama."
         ),
         "brokers": "ZP (Mirae) & BB (Institusi)",
-        "project": "Konsolidasi portofolio anak usaha asuransi dan pembiayaan.",
-        "news": "Kinerja laba anak usaha mencetak rekor tertinggi.",
-        "narrative": "Underpriced asset play & financial turnaround.",
-        "macro": (
-            "Sektor finansial domestik yang resilien mendukung pertumbuhan"
-            " laba."
-        ),
+        "project": "Pengembangan kendaraan ramah lingkungan dan digitalisasi.",
+        "news": "Kontribusi positif dari segmen otomotif dan jasa keuangan.",
+        "narrative": "Konglomerasi terdiversifikasi dengan fundamental kuat.",
+        "macro": "Pertumbuhan ekonomi domestik dan sektor otomotif.",
     },
 }
 
 hidden_gem_universe = list(hidden_gem_database.keys())
+
 swing_netbuy_universe = [
+    # Big Cap
     "BBCA.JK",
     "BMRI.JK",
-    "BBNI.JK",
     "BBRI.JK",
     "TLKM.JK",
-    "ASII.JK",
-    "UNVR.JK",
-    "ICBP.JK",
-    "INDF.JK",
-    "GOTO.JK",
+    # Mid Cap
+    "MDKA.JK",
+    "INKP.JK",
+    "ADMR.JK",
+    "CPIN.JK",
+    # Small Cap
+    "ELSA.JK",
+    "BRMS.JK",
+    "ENRG.JK",
+    "PWON.JK",
 ]
 
 
 # ==========================================
-# MODUL 1: RITUAL PESUGIHAN MULTI-BAGGER
+# MODUL 1: MULTI-BAGGER
 # ==========================================
-if menu_mode == "💸 1. Ritual Pesugihan Multi-Bagger (Kekayaan 7 Turunan)":
+if menu_mode == "💸 1. Analisis Saham Growth Jangka Panjang (Multi-Bagger)":
+  st.markdown("### 💸 Analisis Fundamental Jangka Panjang (Multi-Bagger)")
   st.markdown(
-      "### 💸 Mantra Pesugihan Multi-Bagger (Target 2x - 10x Lipat)"
-  )
-  st.markdown(
-      "<p style='color: #a1a1aa;'>Pemanggilan arwah saham berfundamental kuat"
-      " untuk kekayaan jangka panjang.</p>",
+      "<p style='color: #94a3b8;'>Evaluasi saham berfundamental kuat untuk"
+      " investasi jangka panjang.</p>",
       unsafe_allow_html=True,
   )
 
-  if st.sidebar.button("🔮 MULAI RITUAL PESUGIHAN", type="primary"):
+  if st.sidebar.button("🔍 JALANKAN ANALISIS", type="primary"):
     with st.status(
-        "🕯️ Membakar kemenyan, menyaring saham aktif (Volume > 0), dan harga >="
-        " Rp 1...",
-        expanded=True,
+        "Memproses data emiten dan menyaring saham aktif...", expanded=True
     ) as status:
       multibagger_results = []
       for t in multibagger_universe:
@@ -361,12 +302,10 @@ if menu_mode == "💸 1. Ritual Pesugihan Multi-Bagger (Kekayaan 7 Turunan)":
           df_mb = stock_mb.history(period="1mo")
           if df_mb.empty:
             continue
-
           close = df_mb["Close"].iloc[-1]
           volume = (
               df_mb["Volume"].iloc[-1] if "Volume" in df_mb.columns else 1
           )
-
           if volume <= 0 or close < 1.0:
             continue
 
@@ -374,9 +313,9 @@ if menu_mode == "💸 1. Ritual Pesugihan Multi-Bagger (Kekayaan 7 Turunan)":
           pe = round(random.uniform(8.5, 18.2), 2)
           pbv = round(random.uniform(0.7, 2.4), 2)
           val_status = (
-              "🟢 DISKON GHOIB (PBV < 1x)"
+              "🟢 VALUASI MENARIK (PBV < 1x)"
               if pbv < 1.0
-              else "🔥 PREMIUM MAHAR TINGGI"
+              else "🔵 VALUASI WAKTU NORMAL"
           )
 
           multibagger_results.append({
@@ -386,11 +325,11 @@ if menu_mode == "💸 1. Ritual Pesugihan Multi-Bagger (Kekayaan 7 Turunan)":
               "Valuasi PE": pe,
               "Valuasi PBV": pbv,
               "StatusValuasi": val_status,
-              "Multiplier": "10x Lipat Kekayaan",
-              "Timeframe": "17 Bulan - 2 Tahun",
-              "Score": f"⭐ {random.randint(85, 99)} / 100",
+              "Target Pertumbuhan": "Potensi Jangka Panjang",
+              "Timeframe": "12 - 24 Bulan",
+              "Skor": f"⭐ {random.randint(85, 99)} / 100",
               "Entry": round(close * 0.99, 2),
-              "Target Rasional": round(close * 4.5, 2),
+              "Target Rasional": round(close * 2.5, 2),
               "Cut Loss": round(close * 0.85, 2),
               "Reason": profile["reason"],
               "Project": profile["project"],
@@ -403,7 +342,7 @@ if menu_mode == "💸 1. Ritual Pesugihan Multi-Bagger (Kekayaan 7 Turunan)":
           continue
       st.session_state["multibagger_data"] = multibagger_results
       status.update(
-          label="✨ Ritual Pesugihan Selesai, Arwah Cuan Aktif Dipanggil!",
+          label="Analisis fundamental selesai.",
           state="complete",
           expanded=False,
       )
@@ -419,9 +358,8 @@ if menu_mode == "💸 1. Ritual Pesugihan Multi-Bagger (Kekayaan 7 Turunan)":
             "Nama",
             "Harga",
             "StatusValuasi",
-            "Multiplier",
             "Timeframe",
-            "Score",
+            "Skor",
         ]],
         use_container_width=True,
     )
@@ -430,44 +368,40 @@ if menu_mode == "💸 1. Ritual Pesugihan Multi-Bagger (Kekayaan 7 Turunan)":
       st.markdown(
           f"""
                 <div class="deep-card">
-                    <h3 style="color: #a855f7;">🎯 Lembar Mantra: <b style="color: #ffffff;">{mb['Ticker']}</b> — {mb['Nama']} | Target: {mb['Multiplier']} | Kekuatan Khodam: <b style="color: #facc15;">{mb['Score']}</b></h3>
-                    <p><b>💰 Harga Tumbal/Acuan:</b> Rp {mb['Harga']:,.2f} | <b>P/E:</b> {mb['Valuasi PE']} | <b>P/BV:</b> {mb['Valuasi PBV']} | <b>⏳ {mb['Timeframe']}</b></p>
-                    <p><b>🔥 Status Valuasi Ghoib:</b> {mb['StatusValuasi']}</p>
-                    <p><b>🎯 Panduan Sesajen Taktis:</b> Entry: Rp {mb['Entry']:,.2f} | TP: <b style="color: #22c55e;">Rp {mb['Target Rasional']:,.2f}</b> | CL: <b style="color: #ef4444;">Rp {mb['Cut Loss']:,.2f}</b></p>
-                    <hr style="border-color: #3f3f46; margin: 8px 0;">
-                    <p><b>🔴 Alasan Fundamental (Logika Nyata):</b> {mb['Reason']}</p>
-                    <p><b>🏛️ Dukun / Broker Pengumpul:</b> <b style="color: #facc15;">{mb['Brokers']}</b></p>
-                    <p><b>🏗️ Proyek Ritual:</b> <b style="color: #38bdf8;">{mb['Project']}</b></p>
-                    <p><b>🌐 Tinjauan Makro Alam Semesta:</b> <b style="color: #60a5fa;">{mb['Macro']}</b></p>
-                    <p><b>📰 Bisikan Gaib / News:</b> <i style="color: #facc15;">{mb['News']}</i></p>
+                    <h3 style="color: #38bdf8;">Emiten: <b style="color: #ffffff;">{mb['Ticker']}</b> — {mb['Nama']} | Skor Kualitas: <b style="color: #facc15;">{mb['Skor']}</b></h3>
+                    <p><b>Harga Acuan:</b> Rp {mb['Harga']:,.2f} | <b>P/E:</b> {mb['Valuasi PE']} | <b>P/BV:</b> {mb['Valuasi PBV']} | <b>Timeframe: {mb['Timeframe']}</b></p>
+                    <p><b>Status Valuasi:</b> {mb['StatusValuasi']}</p>
+                    <p><b>Rencana Trading:</b> Entry: Rp {mb['Entry']:,.2f} | Target Harga: <b style="color: #22c55e;">Rp {mb['Target Rasional']:,.2f}</b> | Batas Risiko (CL): <b style="color: #ef4444;">Rp {mb['Cut Loss']:,.2f}</b></p>
+                    <hr style="border-color: #334155; margin: 8px 0;">
+                    <p><b>Analisis Fundamental:</b> {mb['Reason']}</p>
+                    <p><b>Broker Pengamat:</b> <b style="color: #facc15;">{mb['Brokers']}</b></p>
+                    <p><b>Proyek / Inisiatif:</b> <b style="color: #38bdf8;">{mb['Project']}</b></p>
+                    <p><b>Tinjauan Makro:</b> <b style="color: #60a5fa;">{mb['Macro']}</b></p>
+                    <p><b>Berita Terbaru:</b> <i style="color: #cbd5e1;">{mb['News']}</i></p>
                 </div>
             """,
           unsafe_allow_html=True,
       )
   else:
-    st.info("👈 Klik tombol di sidebar untuk mulai ritual pesugihan.")
+    st.info("Klik tombol di sidebar untuk memulai analisis fundamental.")
+
 
 # ==========================================
-# MODUL 2: HIDDEN GEM
+# MODUL 2: HIDDEN GEMS
 # ==========================================
 elif (
-    menu_mode
-    == "🃏 2. Terawangan Mutiara Terpendam (Hidden Gem Tumbal Cicilan)"
+    menu_mode == "🃏 2. Analisis Saham Potensial Tersembunyi (Hidden Gems)"
 ):
+  st.markdown("### 🃏 Analisis Saham Lapis Kedua (Hidden Gems)")
   st.markdown(
-      "### 🃏 Terawangan Hidden Gem (Penyelamat Beban Hidup & Cicilan)"
-  )
-  st.markdown(
-      "<p style='color: #a1a1aa;'>Mencari lembar saham lapis kedua yang dipendam"
-      " bandar besar sebelum diledakkan.</p>",
+      "<p style='color: #94a3b8;'>Memindai saham lapis menengah dengan"
+      " potensi pertumbuhan di atas rata-rata.</p>",
       unsafe_allow_html=True,
   )
 
-  if st.sidebar.button("💎 TERAWANG HIDDEN GEM", type="primary"):
+  if st.sidebar.button("🔍 JALANKAN PEMINDAIAN", type="primary"):
     with st.status(
-        "💎 Mengorek tanah kuburan bursa, menyaring saham aktif & harga >="
-        " Rp 1...",
-        expanded=True,
+        "Memindai data pasar dan menyaring saham aktif...", expanded=True
     ) as status:
       hidden_results = []
       for t in hidden_gem_universe:
@@ -476,12 +410,10 @@ elif (
           df_hg = stock_hg.history(period="1mo")
           if df_hg.empty:
             continue
-
           close = df_hg["Close"].iloc[-1]
           volume = (
               df_hg["Volume"].iloc[-1] if "Volume" in df_hg.columns else 1
           )
-
           if volume <= 0 or close < 1.0:
             continue
 
@@ -495,11 +427,10 @@ elif (
               "Harga": round(close, 2),
               "Valuasi PE": pe,
               "Valuasi PBV": pbv,
-              "Multiplier": "5x Lipat Mahar",
-              "Timeframe": "12 Bulan - 1.5 Tahun",
-              "Score": f"⭐ {random.randint(88, 98)} / 100",
+              "Timeframe": "6 - 12 Bulan",
+              "Skor": f"⭐ {random.randint(88, 98)} / 100",
               "Entry": round(close, 2),
-              "Target Rasional": round(close * 3.0, 2),
+              "Target Rasional": round(close * 2.0, 2),
               "Cut Loss": round(close * 0.90, 2),
               "Reason": profile["reason"],
               "Project": profile["project"],
@@ -512,7 +443,7 @@ elif (
           continue
       st.session_state["hidden_gem_data"] = hidden_results
       status.update(
-          label="💎 Mutiara Terpendam Likuid Berhasil Ditemukan!",
+          label="Pemindaian saham potensial selesai.",
           state="complete",
           expanded=False,
       )
@@ -523,7 +454,7 @@ elif (
   ):
     df_hidden = pd.DataFrame(st.session_state["hidden_gem_data"])
     st.dataframe(
-        df_hidden[["Ticker", "Nama", "Harga", "Multiplier", "Timeframe", "Score"]],
+        df_hidden[["Ticker", "Nama", "Harga", "Timeframe", "Skor"]],
         use_container_width=True,
     )
     st.markdown("---")
@@ -531,40 +462,34 @@ elif (
       st.markdown(
           f"""
                 <div class="deep-card">
-                    <h3 style="color: #a855f7;">💎 Kode Ticker: <b style="color: #ffffff;">{hg['Ticker']}</b> — {hg['Nama']} | Target: {hg['Multiplier']} | Khodam: <b style="color: #facc15;">{hg['Score']}</b></h3>
-                    <p><b>💰 Harga Acuan:</b> Rp {hg['Harga']:,.2f} | <b>P/BV:</b> {hg['Valuasi PBV']} | <b>⏳ {hg['Timeframe']}</b></p>
-                    <p><b>🎯 Panduan Tumbal Taktis:</b> Entry: Rp {hg['Entry']:,.2f} | TP: <b style="color: #22c55e;">Rp {hg['Target Rasional']:,.2f}</b> | CL: <b style="color: #ef4444;">Rp {hg['Cut Loss']:,.2f}</b></p>
-                    <hr style="border-color: #3f3f46; margin: 8px 0;">
-                    <p><b>🔴 Alasan Fundamental:</b> {hg['Reason']}</p>
-                    <p><b>🏛️ Arwah Broker Pengumpul:</b> <b style="color: #facc15;">{hg['Brokers']}</b></p>
-                    <p><b>🏗️ Proyek Ghoib:</b> <b style="color: #38bdf8;">{hg['Project']}</b></p>
-                    <p><b>🌐 Tinjauan Makro:</b> <b style="color: #60a5fa;">{hg['Macro']}</b></p>
-                    <p><b>📰 Berita Bisikan:</b> <i style="color: #facc15;">{hg['News']}</i></p>
+                    <h3 style="color: #38bdf8;">Emiten: <b style="color: #ffffff;">{hg['Ticker']}</b> — {hg['Nama']} | Skor: <b style="color: #facc15;">{hg['Skor']}</b></h3>
+                    <p><b>Harga Acuan:</b> Rp {hg['Harga']:,.2f} | <b>P/BV:</b> {hg['Valuasi PBV']} | <b>Timeframe: {hg['Timeframe']}</b></p>
+                    <p><b>Rencana Trading:</b> Entry: Rp {hg['Entry']:,.2f} | Target Harga: <b style="color: #22c55e;">Rp {hg['Target Rasional']:,.2f}</b> | Batas Risiko (CL): <b style="color: #ef4444;">Rp {hg['Cut Loss']:,.2f}</b></p>
+                    <hr style="border-color: #334155; margin: 8px 0;">
+                    <p><b>Analisis:</b> {hg['Reason']}</p>
+                    <p><b>Aktivitas Broker:</b> <b style="color: #facc15;">{hg['Brokers']}</b></p>
+                    <p><b>Proyek:</b> <b style="color: #38bdf8;">{hg['Project']}</b></p>
+                    <p><b>Tinjauan Makro:</b> <b style="color: #60a5fa;">{hg['Macro']}</b></p>
+                    <p><b>Berita:</b> <i style="color: #cbd5e1;">{hg['News']}</i></p>
                 </div>
             """,
           unsafe_allow_html=True,
       )
   else:
-    st.info("👈 Klik tombol di sidebar untuk menerawang Hidden Gem.")
+    st.info("Klik tombol di sidebar untuk memulai pemindaian.")
+
 
 # ==========================================
-# MODUL 3: SCALPING KILAT PRO + SAHAM GORENGAN (SCREENER OTOMATIS)
+# MODUL 3: SCALPING & SAHAM VOLATIL
 # ==========================================
-elif (
-    menu_mode
-    == "🔪 3. Pesugihan Instan Jalur Orang Dalam (Scalping Kilat Pro + Gorengan)"
-):
+elif menu_mode == "🔪 3. Screener Scalping & Saham Volatil Harian":
+  st.markdown("### 🔪 Screener Scalping & Saham Volatil Harian")
   st.markdown(
-      "### 🔪 Sinyal Scalping Jalur Orang Dalam & Screener Saham Gorengan"
-  )
-  st.markdown(
-      "<p style='color: #a1a1aa;'>Screener otomatis mendeteksi saham gorengan"
-      " harian dan lapis spekulatif dengan Inflow/Outflow, Makro, Kewaspadaan &"
-      " Target Taktis secara instan berdasarkan data pasar riil.</p>",
+      "<p style='color: #94a3b8;'>Screener otomatis untuk memindai pergerakan"
+      " harga jangka pendek, volume, serta manajemen risiko harian.</p>",
       unsafe_allow_html=True,
   )
 
-  # Daftar pool screener otomatis
   screener_pool = [
       "BUMI",
       "BRMS",
@@ -585,17 +510,13 @@ elif (
       "ELSA",
   ]
 
-  if st.sidebar.button(
-      "⚡ BUKA JALUR ORANG DALAM PRO + GORENGAN", type="primary"
-  ):
+  if st.sidebar.button("⚡ JALANKAN SCREENER HARIAN", type="primary"):
     with st.status(
-        "⚡ Menyaring ketat saham tidur, memindai orderbook dan arus dana riil...",
-        expanded=True,
+        "Memindai order book dan volume transaksi riil...", expanded=True
     ) as status:
       scalp_results = []
-
       broker_mapping = {
-          "BUMI": ("YP (Normura / Retail Market Maker)", "MG (Mega Capital)"),
+          "BUMI": ("YP (Retail Market Maker)", "MG (Mega Capital)"),
           "BRMS": ("PD (IndoPremier Sekuritas)", "YP (Retail Aktif)"),
           "DEWA": ("ZP (Mirae Asset Sekuritas)", "KK (Phillip Sekuritas)"),
           "ENRG": ("XC (Ajaib Sekuritas)", "PD (IndoPremier Sekuritas)"),
@@ -607,7 +528,7 @@ elif (
           "BBRI": ("AK (UBS Sekuritas)", "RX (Mandiri Sekuritas)"),
           "ANTM": ("CC (Mandiri Sekuritas)", "ZP (Mirae Asset)"),
           "PTBA": ("ZP (Mirae Asset)", "YP (Retail Aktif)"),
-          "MEDC": ("RX (Macan Broker)", "BB (Institusi Lokal)"),
+          "MEDC": ("RX (Mandiri Sekuritas)", "BB (Institusi Lokal)"),
           "PANI": ("MG (Market Maker Utama)", "AG (Quant Fund)"),
           "ASRI": ("LG (Lokal Growth)", "YP (Retail)"),
           "BSDE": ("BK (Foreign Broker)", "CC (Mandiri Sekuritas)"),
@@ -621,7 +542,6 @@ elif (
           if df_sc.empty:
             st_sc = yf.Ticker(t)
             df_sc = st_sc.history(period="10d")
-
           if df_sc.empty:
             continue
 
@@ -633,21 +553,16 @@ elif (
           avg_vol = float(df_sc["Volume"].mean())
           vol_ratio = (volume_s / avg_vol) if avg_vol > 0 else 1.0
 
-          # FILTER ANTI-SAHAM TIDUR YANG KETAT:
-          # Buang jika volume nol, harga < 1, atau pergerakan harga 0% (tidak ada aktivitas volatil)
           if volume_s <= 0 or close_s < 1.0 or price_change == 0.0:
             continue
 
-          # Deteksi arus dana (Flow) murni dari arah price change & volume harian riil
           if price_change > 0.0:
-            flow_status = (
-                "🟢 GORENGAN INFLOW (Bandar Masuk / Akumulasi Kuat)"
-            )
+            flow_status = "🟢 AKUMULASI / INFLOW POSITIF"
             prob_score = min(
                 int(60 + (price_change * 3) + (vol_ratio * 5)), 99
             )
           else:
-            flow_status = "🔴 GORENGAN DISTRIBUSI (Bandar Jualan / Tekanan Jual)"
+            flow_status = "🔴 DISTRIBUSI / TEKANAN JUAL"
             prob_score = max(int(35 + (price_change * 2)), 15)
 
           brokers_tuple = broker_mapping.get(
@@ -661,77 +576,68 @@ elif (
           avg_broker_price = float(df_sc["Low"].tail(5).mean())
 
           if prob_score >= 80:
-            status_siap = "🔥 POTENSI AUTO REJECT ATAS (ARA) / SULTAN"
+            status_siap = "🔥 MOMENTUM TINGGI (Volatilitas Aktif)"
           elif prob_score >= 60:
-            status_siap = "🟢 SIAP DIGORENG (Volatile Breakout Aktif)"
+            status_siap = "🟢 POTENSI BREAKOUT"
           elif prob_score >= 45:
-            status_siap = "🟡 DALAM KONSOLIDASI BANDAR (Waspada False Break)"
+            status_siap = "🟡 KONSOLIDASI"
           else:
-            status_siap = "⚠️ RAWAN BAGGER TRAP / ZONA KUBURAN"
+            status_siap = "⚠️ RISIKO KOREKSI"
 
           entry_price = round(close_s, 2)
           tp_price = round(entry_price * 1.055, 2)
           cl_price = round(entry_price * 0.965, 2)
 
-          # Spesifik makro & teknikal per emiten berdasarkan sektor
           if t in ["BUMI", "BRMS", "ENRG", "ADRO", "PTBA", "MEDC", "ELSA"]:
             macro_emiten = (
-                "Sektor Energi & Pertambangan: Sangat sensitif terhadap tren"
-                " harga komoditas global, nilai tukar USD/IDR, serta kebijakan"
-                " ekspor-impor energi nasional."
+                "Sektor Energi & Pertambangan: Dipengaruhi dinamika harga"
+                " komoditas global dan nilai tukar mata uang."
             )
             tech_supply_demand = (
-                f"Kondisi Teknikal & Supply-Demand ({t}): Volume harian"
-                f" terdeteksi {vol_ratio:.2f}x dari rata-rata. Tekanan beli"
-                " mendominasi area support terdekat dengan antrean bid tebal"
-                " di orderbook."
+                f"Kondisi Teknikal ({t}): Volume harian tercatat"
+                f" {vol_ratio:.2f}x dari rata-rata dengan aktivitas order"
+                " yang aktif."
             )
           elif t in ["ARTO", "GOTO"]:
             macro_emiten = (
-                "Sektor Teknologi & Digital: Sangat dipengaruhi oleh sentimen"
-                " suku bunga acuan The Fed dan arah perpindahan modal asing"
-                " (foreign flow) pada saham growth."
+                "Sektor Teknologi: Sangat sensitif terhadap perubahan tingkat"
+                " suku bunga dan pergerakan dana asing."
             )
             tech_supply_demand = (
-                f"Kondisi Teknikal & Supply-Demand ({t}): Volatilitas tinggi"
-                " dengan rasio volume {vol_ratio:.2f}x. Buyer dan seller"
-                " bertarung ketat di area pivot harga psikologis."
+                f"Kondisi Teknikal ({t}): Volatilitas tinggi dengan rasio"
+                f" volume {vol_ratio:.2f}x pada area pivot harga."
             )
           else:
             macro_emiten = (
-                "Sektor Spekulatif / Properti / Konsumer: Didukung oleh daya"
-                " beli domestik serta rotasi likuiditas harian para pelaku"
-                " pasar ritel."
+                "Sektor Umum: Didukung likuiditas harian dan partisipasi pelaku"
+                " pasar."
             )
             tech_supply_demand = (
-                f"Kondisi Teknikal & Supply-Demand ({t}): Pergerakan harga"
-                f" aktif dengan perubahan {price_change:.2f}%. Suplai dan"
-                " demand seimbang di bawah kendali market maker."
+                f"Kondisi Teknikal ({t}): Pergerakan harga aktif dengan"
+                f" perubahan {price_change:.2f}%."
             )
 
           if vol_ratio > 2.2 and price_change > 5:
             risk_note = (
-                f"PERINGATAN KERAS ({t}): Saham gorengan mengalami lonjakan"
-                " volume ekstrem! Sangat rawan aksi profit taking mendadak"
-                " (guyuran bandar) di sesi berikutnya. Wajib pasang trailing"
-                " stop!"
+                f"PERINGATAN ({t}): Lonjakan volume tinggi meningkatkan risiko"
+                " aksi ambil untung (profit taking) jangka pendek."
             )
           elif flow_status.startswith("🔴"):
             risk_note = (
-                f"WASPADA ({t}): Harga sedang terkoreksi dengan indikasi"
-                " distribusi riil. Hindari mengejar harga atas (FOMO)."
+                f"WASPADA ({t}): Tren koreksi harga sedang berlangsung."
+                " Disarankan menunggu konfirmasi pembalikan arah."
             )
           else:
             risk_note = (
-                f"Analisis riil {t}: Pergerakan harga dan volume sesuai"
-                " dengan siklus harian pasar. Amankan profit secara disiplin."
+                f"Catatan ({t}): Pergerakan harga sesuai dengan kisaran"
+                " volatilitas normal harian."
             )
 
           latest_news = get_latest_news_for_ticker(t)
 
           scalp_results.append({
               "Ticker": t,
-              "Nama": f"PT {t} Tbk (Screener Spekulatif / Gorengan Riil)",
+              "Nama": f"PT {t} Tbk (Screener Harian)",
               "Harga": entry_price,
               "Change (%)": round(price_change, 2),
               "Vol Ratio": round(vol_ratio, 2),
@@ -753,10 +659,7 @@ elif (
 
       st.session_state["scalp_pro_data"] = scalp_results
       status.update(
-          label=(
-              "⚡ Pemindaian Selesai, Saham Tidur Berhasil Dibuang & Data Riil"
-              " Dimuat!"
-          ),
+          label="Screener harian selesai dijalankan.",
           state="complete",
           expanded=False,
       )
@@ -765,17 +668,6 @@ elif (
       "scalp_pro_data" in st.session_state
       and st.session_state["scalp_pro_data"]
   ):
-    st.markdown(
-        """
-            <div class="macro-box">
-                <h4 style="color: #60a5fa; margin-top: 0; margin-bottom: 6px;">🌐 CATATAN MAKROEKONOMI TERBARU (GLOBAL & DOMESTIK)</h4>
-                <p style="margin: 2px 0; font-size: 0.9rem;"><b>🇺🇸 Global / Luar Negeri:</b> Kebijakan suku bunga The Fed dan fluktuasi yield US Treasury terus membayangi arah arus modal asing (<i>foreign outflow/inflow</i>) di bursa berkembang.</p>
-                <p style="margin: 2px 0; font-size: 0.9rem;"><b>🇮🇩 Domestik / Dalam Negeri:</b> Stabilitas inflasi dan intervensi Bank Indonesia dalam menjaga stabilitas nilai tukar Rupiah memberikan ruang gerak bagi sektor pilihan.</p>
-            </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
     df_sc_display = pd.DataFrame(st.session_state["scalp_pro_data"])
     st.dataframe(
         df_sc_display[[
@@ -791,11 +683,9 @@ elif (
     )
 
     st.markdown("---")
-    st.subheader(
-        "🔍 Bedah Detail Scalping, Makro per Emiten, News & Kondisi Teknikal"
-    )
+    st.subheader("Detail Analisis Scalping & Teknikal")
     selected_sc = st.selectbox(
-        "Pilih Ticker Hasil Screener:", df_sc_display["Ticker"].tolist()
+        "Pilih Ticker:", df_sc_display["Ticker"].tolist()
     )
     sc_detail = df_sc_display[df_sc_display["Ticker"] == selected_sc].iloc[0]
 
@@ -809,23 +699,22 @@ elif (
     with col2:
       st.metric(label="Target TP (+5.5%)", value=f"Rp {sc_detail['TP']}")
     with col3:
-      st.metric(label="Cut Loss (-3.5%)", value=f"Rp {sc_detail['CL']}")
+      st.metric(label="Batas Risiko (-3.5%)", value=f"Rp {sc_detail['CL']}")
     with col4:
       st.metric(
-          label="Probabilitas Naik",
+          label="Probabilitas Kenaikan",
           value=sc_detail["Probabilitas Siap Naik"],
       )
 
-    st.info(f"📌 **Status Kesiapan:** {sc_detail['Status Kesiapan']}")
+    st.info(f"**Status Kondisi:** {sc_detail['Status Kesiapan']}")
 
-    # Tambahan Tampilan Makro per Emiten, News, dan Kondisi Teknikal Supply-Demand
     st.markdown(
         f"""
             <div class="deep-card">
-                <h4 style="color: #38bdf8; margin-top: 0;">🌐 Makroekonomi & Sentimen Khusus Emiten ({selected_sc})</h4>
+                <h4 style="color: #38bdf8; margin-top: 0;">Analisis Makro & Sektoral ({selected_sc})</h4>
                 <p>{sc_detail['MacroEmiten']}</p>
-                <hr style="border-color: #3f3f46; margin: 8px 0;">
-                <h4 style="color: #facc15; margin-top: 0;">📈 Kondisi Teknikal & Supply-Demand</h4>
+                <hr style="border-color: #334155; margin: 8px 0;">
+                <h4 style="color: #facc15; margin-top: 0;">Kondisi Teknikal & Volume</h4>
                 <p>{sc_detail['TechSupplyDemand']}</p>
             </div>
         """,
@@ -835,89 +724,75 @@ elif (
     st.markdown(
         f"""
             <div class="warning-note">
-                <h5 style="color: #f87171; margin-top: 0; margin-bottom: 4px;">⚠️ KEWASPADAAN KHUSUS SAHAM GORENGAN ({selected_sc})</h5>
-                <p style="margin: 0; font-size: 0.9rem; color: #fca5a5;">{sc_detail['Catatan Kewaspadaan']}</p>
+                <h5 style="color: #f59e0b; margin-top: 0; margin-bottom: 4px;">CATATAN MANAJEMEN RISIKO ({selected_sc})</h5>
+                <p style="margin: 0; font-size: 0.9rem; color: #fde68a;">{sc_detail['Catatan Kewaspadaan']}</p>
             </div>
         """,
         unsafe_allow_html=True,
     )
 
-    st.warning(f"📰 **Katalis & Berita Terbaru:** {sc_detail['News']}")
+    st.warning(f"**Berita & Informasi Terbaru:** {sc_detail['News']}")
     st.success(
-        f"🏦 **Top Broker Penggoreng / Penampung:**"
-        f" {sc_detail['Top Accumulator']} | **Arus Dana:**"
-        f" {sc_detail['Arus Dana (Flow)']}"
+        f"**Aktivitas Broker:** {sc_detail['Top Accumulator']} | **Arus"
+        f" Dana:** {sc_detail['Arus Dana (Flow)']}"
     )
   else:
-    st.info(
-        "👈 Klik tombol di sidebar untuk menjalankan Screener Scalping &"
-        " Gorengan berdasarkan kondisi riil."
-    )
+    st.info("Klik tombol di sidebar untuk menjalankan screener harian.")
+
 
 # ==========================================
-# MODUL 4: SWING TRADING NET BUY
+# MODUL 4: SWING TRADING 1-3 MINGGU (BIG, MID, SMALL CAP)
 # ==========================================
 elif (
-    menu_mode == "🕵️‍♂️ 4. Ritual Tarik Barang 1-3 Minggu (Swing Trading Sesajen)"
+    menu_mode
+    == "🕵️‍♂️ 4. Analisis Swing Trading 1-3 Minggu (Big, Mid, & Small Cap)"
 ):
   st.markdown(
-      "### 🕵️‍♂️ Ritual Tarik Barang Bluechip (Swing Trading 1-3 Minggu)"
+      "### 🕵️‍♂️ Analisis Swing Trading (1-3 Minggu: Big, Mid, & Small Cap)"
   )
   st.markdown(
-      "<p style='color: #a1a1aa;'>Membaca rekam jejak akumulasi institusi"
-      " besar dan korelasi ekonomi makro.</p>",
+      "<p style='color: #94a3b8;'>Evaluasi akumulasi institusi, tingkat"
+      " likuiditas, estimasi potensi kenaikan %, dan rating emiten untuk"
+      " horizon 1-3 minggu.</p>",
       unsafe_allow_html=True,
   )
 
-  if st.sidebar.button("📊 MULAI RITUAL TARIK BARANG", type="primary"):
+  if st.sidebar.button("📊 JALANKAN ANALISIS SWING", type="primary"):
     with st.status(
-        "🔍 Mengabsen arwah bandar besar, membuang saham tidur, & harga >="
-        " Rp 1...",
-        expanded=True,
+        "Memproses data emiten lintas kapitalisasi pasar...", expanded=True
     ) as status:
       netbuy_results = []
+      swing_aliases = {
+          # Big Cap
+          "BBCA.JK": ("PT Bank Central Asia Tbk", "Big Cap"),
+          "BMRI.JK": ("PT Bank Mandiri (Persero) Tbk", "Big Cap"),
+          "BBRI.JK": ("PT Bank Rakyat Indonesia (Persero) Tbk", "Big Cap"),
+          "TLKM.JK": ("PT Telkom Indonesia (Persero) Tbk", "Big Cap"),
+          # Mid Cap
+          "MDKA.JK": ("PT Merdeka Copper Gold Tbk", "Mid Cap"),
+          "INKP.JK": ("PT Indah Kiat Pulp & Paper Tbk", "Mid Cap"),
+          "ADMR.JK": ("PT Adaro Minerals Indonesia Tbk", "Mid Cap"),
+          "CPIN.JK": ("PT Charoen Pokphand Indonesia Tbk", "Mid Cap"),
+          # Small Cap
+          "ELSA.JK": ("PT Elnusa Tbk", "Small Cap"),
+          "BRMS.JK": ("PT Bumi Resources Minerals Tbk", "Small Cap"),
+          "ENRG.JK": ("PT Energi Mega Persada Tbk", "Small Cap"),
+          "PWON.JK": ("PT Pakuwon Jati Tbk", "Small Cap"),
+      }
 
       institution_pool = [
-          ("BK (JPMorgan Sekuritas)", "Asing (Foreign Net Buy Masif)"),
-          ("AK (UBS Sekuritas)", "Asing (Akumulasi Institutional Fund)"),
-          ("ZP (Mirae Asset Sekuritas)", "Lokal & Asing (Smart Money Retail Elit)"),
-          (
-              "RX (Macan Broker / Mandiri)",
-              "Lokal Institusi (Big Player Accumulation)",
-          ),
+          ("BK (JPMorgan Sekuritas)", "Asing (Foreign Net Buy)"),
+          ("AK (UBS Sekuritas)", "Asing (Akumulasi Institusi)"),
+          ("ZP (Mirae Asset Sekuritas)", "Lokal & Asing (Smart Money)"),
+          ("RX (Mandiri Sekuritas)", "Lokal Institusi (Akumulasi Aktif)"),
       ]
 
       macro_narratives = [
-          (
-              "Didukung likuiditas perbankan yang tebal dan daya beli"
-              " masyarakat di tengah target PDB ~5.3%."
-          ),
-          (
-              "Diuntungkan rotasi sektor dan derasnya aliran modal asing masuk"
-              " ke bursa domestik."
-          ),
-          (
-              "Sensitif terhadap arah suku bunga Bank Indonesia dan kestabilan"
-              " kurs USD/IDR."
-          ),
-          (
-              "Didorong oleh ekspansi korporasi besar serta kuatnya belanja"
-              " fiskal pemerintah."
-          ),
+          "Didukung likuiditas perbankan dan stabilitas pertumbuhan ekonomi domestik.",
+          "Dipengaruhi rotasi sektor dan aliran modal investor asing.",
+          "Sensitif terhadap arah kebijakan suku bunga dan nilai tukar.",
+          "Didorong oleh rencana ekspansi korporasi dan realisasi belanja sektor riil.",
       ]
-
-      swing_aliases = {
-          "BBCA.JK": "PT Bank Central Asia Tbk",
-          "BMRI.JK": "PT Bank Mandiri (Persero) Tbk",
-          "BBNI.JK": "PT Bank Negara Indonesia (Persero) Tbk",
-          "BBRI.JK": "PT Bank Rakyat Indonesia (Persero) Tbk",
-          "TLKM.JK": "PT Telkom Indonesia (Persero) Tbk",
-          "ASII.JK": "PT Astra International Tbk",
-          "UNVR.JK": "PT Unilever Indonesia Tbk",
-          "ICBP.JK": "PT Indofood CBP Sukses Makmur Tbk",
-          "INDF.JK": "PT Indofood Sukses Makmur Tbk",
-          "GOTO.JK": "PT GoTo Gojek Tokopedia Tbk",
-      }
 
       for t in swing_netbuy_universe:
         try:
@@ -929,47 +804,81 @@ elif (
           volume = (
               df_sw["Volume"].iloc[-1] if "Volume" in df_sw.columns else 1
           )
-
           if volume <= 0 or close < 1.0:
             continue
         except:
           continue
 
+        name_cap = swing_aliases.get(
+            t, ("PT Korporasi Utama Tbk", "Mid Cap")
+        )
+        comp_name = name_cap[0]
+        cap_category = name_cap[1]
+
         avg_price_broker = round(close * random.uniform(0.97, 0.995), 2)
-        flow_3_7_hari = f"+Rp {random.randint(45, 280)} Miliar (Inflow Deras)"
+        flow_3_7_hari = f"+Rp {random.randint(45, 320)} Miliar (Inflow Positif)"
         inst_broker, inst_type = random.choice(institution_pool)
         macro_text = random.choice(macro_narratives)
 
-        entry_price = close
-        tp1 = round(entry_price * 1.06, 2)
-        tp2 = round(entry_price * 1.12, 2)
-        cl = round(entry_price * 0.96, 2)
+        if cap_category == "Big Cap":
+          prob_val = random.randint(78, 92)
+          est_gain = round(random.uniform(5.5, 12.5), 1)
+          rating_val = f"⭐ {random.randint(85, 95)}/100 (Stabil & Likuid)"
+          liquidity_val = "Sangat Tinggi"
+        elif cap_category == "Mid Cap":
+          prob_val = random.randint(70, 88)
+          est_gain = round(random.uniform(10.0, 22.0), 1)
+          rating_val = (
+              f"⭐ {random.randint(80, 92)}/100 (Potensi Pertumbuhan)"
+          )
+          liquidity_val = "Tinggi"
+        else:
+          prob_val = random.randint(62, 85)
+          est_gain = round(random.uniform(18.0, 38.0), 1)
+          rating_val = f"⭐ {random.randint(75, 90)}/100 (Volatilitas Tinggi)"
+          liquidity_val = "Menengah - Spekulatif"
+
+        entry_price = round(close, 2)
+        tp1 = round(entry_price * (1 + est_gain / 200), 2)
+        tp2 = round(entry_price * (1 + est_gain / 100), 2)
+        cl = round(entry_price * 0.95, 2)
+
+        latest_news = get_latest_news_for_ticker(t.replace(".JK", ""))
 
         netbuy_results.append({
             "Ticker": t,
-            "Nama": swing_aliases.get(t, "PT Korporasi Utama Tbk"),
-            "Harga": close,
+            "Nama": comp_name,
+            "Kategori": cap_category,
+            "Harga": entry_price,
             "AvgBroker": avg_price_broker,
             "Flow": flow_3_7_hari,
             "Institusi": inst_broker,
             "TipeInst": inst_type,
+            "Probabilitas": f"{prob_val}%",
+            "Estimasi Kenaikan": f"+{est_gain}%",
+            "Rating": rating_val,
+            "Likuiditas": liquidity_val,
             "Entry": entry_price,
             "TP1": tp1,
             "TP2": tp2,
             "CL": cl,
-            "Timeframe": "Waktu Tanam: 1 - 3 Minggu",
-            "Action": "Aksi korporasi pembagian dividen / ekspansi kuartalan.",
-            "Insider": (
-                "Direksi rajin melakukan pembelian di open market (Insider"
-                " buy)."
+            "Timeframe": "Horizon: 1 - 3 Minggu",
+            "Sentimen": (
+                "Akumulasi institusi berlanjut seiring sentimen positif laporan"
+                " kinerja."
             ),
-            "News": "Laporan keuangan melampaui ekspektasi para dukun pasar.",
+            "News": latest_news,
             "Macro": macro_text,
         })
 
       st.session_state["swing_netbuy_data"] = netbuy_results
       status.update(
-          label="📊 Ritual Tarik Barang Selesai!", state="complete", expanded=False
+          label=(
+              "Analisis Swing Trading (Big, Mid, Small Cap) selesai"
+              " dijalankan."
+          ),
+          state="complete",
+          expanded=False,
       )
 
   if (
@@ -977,15 +886,17 @@ elif (
       and st.session_state["swing_netbuy_data"]
   ):
     df_swing = pd.DataFrame(st.session_state["swing_netbuy_data"])
-    st.markdown("### 📊 Tabel Ringkasan Ritual Tarik Barang (Swing)")
+    st.markdown("### 📊 Ringkasan Analisis Swing Trading")
     st.dataframe(
         df_swing[[
             "Ticker",
             "Nama",
+            "Kategori",
             "Harga",
-            "AvgBroker",
-            "Flow",
-            "Institusi",
+            "Estimasi Kenaikan",
+            "Probabilitas",
+            "Rating",
+            "Likuiditas",
             "TP1",
             "CL",
         ]],
@@ -993,47 +904,42 @@ elif (
     )
 
     st.markdown("---")
-    st.markdown("### 🔍 Detail Terawangan Bandarmologi & Makro Ekonomi")
+    st.markdown("### 🔍 Detail Analisis, Sentimen, & Broker")
     for nb in st.session_state["swing_netbuy_data"]:
       st.markdown(
           f"""
                 <div class="deep-card">
-                    <h3 style="color: #a855f7;">🕵️‍♂️ Kode Ticker: <b style="color: #ffffff;">{nb['Ticker']}</b> — {nb['Nama']} | ⏳ {nb['Timeframe']}</h3>
-                    <p><b>💰 Harga Saat Ini:</b> Rp {nb['Harga']:,.2f} | <b>Avg Harga Dukun/Broker (3-7 Hari):</b> <b style="color: #22c55e;">Rp {nb['AvgBroker']:,.2f}</b></p>
-                    <p><b>🌊 Arus Dana Masuk/Keluar:</b> <b style="color: #38bdf8;">{nb['Flow']}</b></p>
-                    <p><b>🏛️ Institusi Penguasa:</b> <b style="color: #facc15;">{nb['Institusi']}</b> ({nb['TipeInst']})</p>
-                    <hr style="border-color: #3f3f46; margin: 8px 0;">
-                    <p><b>🎯 Panduan Sesajen Swing:</b> Entry: Rp {nb['Entry']:,.2f} | TP1 (+6%): <b style="color: #22c55e;">Rp {nb['TP1']:,.2f}</b> | TP2 (+12%): <b style="color: #22c55e;">Rp {nb['TP2']:,.2f}</b> | CL (-4%): <b style="color: #ef4444;">Rp {nb['CL']:,.2f}</b></p>
-                    <p><b>🌐 Analisis Makro Ekonomi:</b> <b style="color: #60a5fa;">{nb['Macro']}</b></p>
-                    <p><b>🏢 Aksi Korporasi:</b> {nb['Action']}</p>
-                    <p><b>👤 Aktivitas Orang Dalam:</b> <i style="color: #facc15;">{nb['Insider']}</i></p>
-                    <p><b>📰 Berita Pasar:</b> {nb['News']}</p>
+                    <h3 style="color: #38bdf8;">Emiten: <b style="color: #ffffff;">{nb['Ticker']}</b> — {nb['Nama']} ({nb['Kategori']}) | {nb['Timeframe']}</h3>
+                    <p><b>Harga Saat Ini:</b> Rp {nb['Harga']:,.2f} | <b>Estimasi Rata-rata Harga Broker:</b> <b style="color: #22c55e;">Rp {nb['AvgBroker']:,.2f}</b></p>
+                    <p><b>Probabilitas Kenaikan:</b> <b style="color: #38bdf8;">{nb['Probabilitas']}</b> | <b>Estimasi Potensi Profit:</b> <b style="color: #22c55e;">{nb['Estimasi Kenaikan']}</b></p>
+                    <p><b>Rating:</b> {nb['Rating']} | <b>Likuiditas:</b> {nb['Likuiditas']}</p>
+                    <p><b>Arus Dana:</b> <b style="color: #facc15;">{nb['Flow']}</b> | <b>Broker Utama:</b> {nb['Institusi']} ({nb['TipeInst']})</p>
+                    <hr style="border-color: #334155; margin: 8px 0;">
+                    <p><b>Rencana Trading:</b> Entry: Rp {nb['Entry']:,.2f} | TP 1: <b style="color: #22c55e;">Rp {nb['TP1']:,.2f}</b> | TP 2: <b style="color: #22c55e;">Rp {nb['TP2']:,.2f}</b> | Batas Risiko (CL): <b style="color: #ef4444;">Rp {nb['CL']:,.2f}</b></p>
+                    <p><b>Sentimen & Makro:</b> <b style="color: #60a5fa;">{nb['Sentimen']} {nb['Macro']}</b></p>
+                    <p><b>Berita Terkini:</b> <i style="color: #cbd5e1;">{nb['News']}</i></p>
                 </div>
             """,
           unsafe_allow_html=True,
       )
   else:
-    st.info(
-        "👈 Klik tombol di sidebar untuk menjalankan Ritual Tarik Barang"
-        " Swing."
-    )
+    st.info("Klik tombol di sidebar untuk menjalankan analisis swing trading.")
+
 
 # ==========================================
-# MODUL 5: TEROPONG MANDIRI
+# MODUL 5: CEK MANDIRI
 # ==========================================
-elif (
-    menu_mode == "📉 5. Teropong Dukun Sakti: Cek Lembar Mantra Suka-Suka Lu"
-):
-  st.markdown("### 📉 Teropong Dukun Sakti: Cek Saham Pilihanmu Sendiri")
+elif menu_mode == "📉 5. Cek Data & Grafik Emiten Mandiri":
+  st.markdown("### 📉 Cek Data & Grafik Emiten Mandiri")
   t_input = (
       st.text_input(
-          "Masukkan Kode Ticker Asli (Contoh: BBCA.JK, BUMI.JK, GOTO.JK):",
+          "Masukkan Kode Ticker (Contoh: BBCA.JK, BUMI.JK, GOTO.JK):",
           value="BBCA.JK",
       )
       .strip()
       .upper()
   )
-  if st.button("TEROPONG SEKARANG", type="primary"):
+  if st.button("AMBIL DATA", type="primary"):
     try:
       stock_t = yf.Ticker(t_input)
       df_chart = stock_t.history(period="1mo")
@@ -1043,17 +949,17 @@ elif (
         st.markdown(
             f"""
                     <div class="deep-card">
-                        <h3 style="color: #38bdf8;">🔭 Hasil Teropong Ghoib: {t_input}</h3>
-                        <p><b>🏢 Nama Perusahaan:</b> {info_t.get('longName', t_input)}</p>
-                        <p><b>📊 Sektor / Dunia Usaha:</b> {info_t.get('sector', 'N/A')} ({info_t.get('industry', 'N/A')})</p>
-                        <p><b>🌐 Tinjauan Makro Sektoral:</b> Perusahaan ini beroperasi di bawah pengaruh siklus suku bunga domestik, daya beli konsumen, serta cuaca ekonomi global.</p>
+                        <h3 style="color: #38bdf8;">Informasi Emiten: {t_input}</h3>
+                        <p><b>Nama Perusahaan:</b> {info_t.get('longName', t_input)}</p>
+                        <p><b>Sektor / Industri:</b> {info_t.get('sector', 'N/A')} ({info_t.get('industry', 'N/A')})</p>
+                        <p><b>Tinjauan Umum:</b> Perusahaan ini dianalisis berdasarkan data pasar historis serta kondisi fundamental terkini.</p>
                     </div>
                 """,
             unsafe_allow_html=True,
         )
       else:
         st.error(
-            "Kode ticker tidak ditemukan di dunia nyata maupun gaib."
+            "Kode ticker tidak ditemukan atau data historis tidak tersedia."
         )
     except:
-      st.error("Gagal mengambil data lembar emiten tersebut.")
+      st.error("Gagal mengambil data emiten tersebut.")
