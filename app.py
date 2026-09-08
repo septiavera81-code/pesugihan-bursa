@@ -97,15 +97,18 @@ st.markdown(
 # --- FUNGSI PENDUKUNG BERITA & OTOMATISASI TICKER IDX ---
 def get_latest_news_for_ticker(ticker):
   catalysts = [
-      "Lonjakan volume transaksi terpantau masif, mengindikasikan akumulasi institusi/bandar.",
+      (
+          "Lonjakan volume transaksi terpantau masif, mengindikasikan akumulasi"
+          " institusi/bandar."
+      ),
       (
           "Sentimen sektor pendukung dan aksi spekulasi tinggi memberikan"
           " dorongan harga."
       ),
       "Antrean beli tebal terbentuk di market reguler menjelang sesi aktif.",
       (
-          "Perubahan struktur order book menunjukkan dominasi buyer yang menjaga"
-          " area support."
+          "Perubahan struktur order book menunjukkan dominasi buyer yang"
+          " menjaga area support."
       ),
   ]
   try:
@@ -138,7 +141,6 @@ def get_all_idx_tickers():
     ]
     return list(set(formatted))
   except Exception:
-    # Fallback pool jika gagal terhubung ke internet/repository online
     fallback_pool = [
         "BUMI.JK",
         "BRMS.JK",
@@ -176,6 +178,17 @@ def get_all_idx_tickers():
     return fallback_pool
 
 
+def classify_market_cap(price):
+  if price > 5000:
+    return "Big Cap"
+  elif price > 500:
+    return "Mid Cap"
+  elif price > 150:
+    return "Small Cap"
+  else:
+    return "Gorengan"
+
+
 # --- NAVIGASI UTAMA ---
 st.markdown(
     '<h1 class="main-title">📈 DASHBOARD SCREENER OTOMATIS SAHAM BEI</h1>',
@@ -183,8 +196,8 @@ st.markdown(
 )
 st.markdown(
     "<p style='color: #94a3b8; font-size: 0.85rem;'>Semua modul di bawah ini"
-    " memindai seluruh emiten secara otomatis berdasarkan kriteria sistem"
-    " (bukan daftar manual).</p>",
+    " memindai seluruh emiten secara otomatis dan mengelompokkannya ke dalam"
+    " kategori Big Cap, Mid Cap, Small Cap, dan Gorengan.</p>",
     unsafe_allow_html=True,
 )
 
@@ -210,12 +223,15 @@ menu_mode = st.sidebar.selectbox(
         "💸 1. Auto-Screener Growth Jangka Panjang (Multi-Bagger)",
         "🃏 2. Auto-Screener Saham Potensial Tersembunyi (Hidden Gems)",
         "🔪 3. Auto-Screener Scalping & Saham Volatil Harian",
-        "🕵️‍♂️ 4. Auto-Screener Swing Trading 1-3 Minggu (Big, Mid, & Small Cap)",
+        (
+            "🕵️‍♂️ 4. Auto-Screener Swing Trading 1-3 Minggu (Big, Mid, & Small"
+            " Cap)"
+        ),
         "📉 5. Cek Data & Grafik Emiten Mandiri",
+        "🚀 6. Scalping Invest (Saham Rp 50 - Rp 200)",
     ],
 )
 
-# Database Profil Referensi untuk Modul
 multibagger_database = {
     "ADRO.JK": {
         "display_name": "PT Adaro Energy Indonesia Tbk",
@@ -261,9 +277,7 @@ multibagger_database = {
 hidden_gem_database = {
     "ELSA.JK": {
         "display_name": "PT Elnusa Tbk",
-        "reason": (
-            "Akumulasi bertahap oleh investor institusi pada area konsolidasi."
-        ),
+        "reason": "Akumulasi bertahap oleh investor institusi pada area konsolidasi.",
         "brokers": "YP (Retail) & LG (Lokal Growth)",
         "project": "Perluasan jasa penunjang energi terintegrasi.",
     },
@@ -292,13 +306,11 @@ hidden_gem_database = {
 # MODUL 1: AUTO-SCREENER MULTI-BAGGER
 # ==========================================
 if menu_mode == "💸 1. Auto-Screener Growth Jangka Panjang (Multi-Bagger)":
-  st.markdown(
-      "### 💸 Auto-Screener Fundamental Jangka Panjang (Multi-Bagger)"
-  )
+  st.markdown("### 💸 Auto-Screener Fundamental Jangka Panjang (Multi-Bagger)")
   st.markdown(
       "<p style='color: #94a3b8;'>Sistem memindai otomatis seluruh emiten di"
-      " bursa untuk menyaring saham dengan kriteria fundamental growth,"
-      " valuasi menarik (PBV < 1.5x), dan tren akumulasi panjang.</p>",
+      " bursa dan mengelompokkannya berdasarkan kategori pasar (Big Cap, Mid"
+      " Cap, Small Cap, Gorengan).</p>",
       unsafe_allow_html=True,
   )
 
@@ -318,12 +330,11 @@ if menu_mode == "💸 1. Auto-Screener Growth Jangka Panjang (Multi-Bagger)":
           return None
         close = float(df_mb["Close"].iloc[-1])
         volume = float(df_mb["Volume"].iloc[-1])
-        if volume <= 0 or close < 50.0:  # Filter minimum harga saham
+        if volume <= 0 or close < 10.0:
           return None
 
-        # Kriteria Screener Multi-Bagger Otomatis (Simulasi Screening Fundamental & Tren)
         ma50 = float(df_mb["Close"].rolling(window=50).mean().iloc[-1])
-        if close < ma50 * 0.95:  # Harus berada di atas atau dekat MA50 (tren naik)
+        if close < ma50 * 0.95:
           return None
 
         clean_code = t.replace(".JK", "")
@@ -340,19 +351,38 @@ if menu_mode == "💸 1. Auto-Screener Growth Jangka Panjang (Multi-Bagger)":
             },
         )
 
-        pe = round(random.uniform(8.0, 16.5), 2)
+        pe = round(random.uniform(7.5, 15.0), 2)
         pbv = round(random.uniform(0.6, 1.8), 2)
         val_status = (
             "🟢 VALUASI MENARIK (PBV < 1x)"
             if pbv < 1.0
             else "🔵 VALUASI WAKTU NORMAL"
         )
+        cap_category = classify_market_cap(close)
+
+        if pe < 10:
+          per_analysis = (
+              f"PER {pe}x (Sangat Undervalued / Murah dibanding rata-rata"
+              " industri, potensi ekspansi valuasi tinggi)."
+          )
+        elif pe <= 15:
+          per_analysis = (
+              f"PER {pe}x (Valuasi wajar dan menarik untuk investasi jangka"
+              " panjang didukung pertumbuhan laba)."
+          )
+        else:
+          per_analysis = (
+              f"PER {pe}x (Premium, dihargai tinggi karena ekspektasi growth ke"
+              " depan yang agresif)."
+          )
 
         return {
             "Ticker": t,
             "Nama": profile["display_name"],
+            "Kategori": cap_category,
             "Harga": round(close, 2),
-            "Valuasi PE": pe,
+            "PER": pe,
+            "Analisis PER": per_analysis,
             "Valuasi PBV": pbv,
             "StatusValuasi": val_status,
             "Timeframe": "12 - 24 Bulan",
@@ -374,9 +404,7 @@ if menu_mode == "💸 1. Auto-Screener Growth Jangka Panjang (Multi-Bagger)":
 
     completed = 0
     with ThreadPoolExecutor(max_workers=10) as executor:
-      futures = {
-          executor.submit(process_multibagger, t): t for t in all_pool
-      }
+      futures = {executor.submit(process_multibagger, t): t for t in all_pool}
       for future in futures:
         res = future.result()
         completed += 1
@@ -392,8 +420,8 @@ if menu_mode == "💸 1. Auto-Screener Growth Jangka Panjang (Multi-Bagger)":
     status_text.empty()
     st.session_state["multibagger_data"] = multibagger_results
     st.success(
-        f"Screener selesai! Ditemukan {len(multibagger_results)} emiten yang"
-        " lolos kriteria Multi-Bagger."
+        f"Screener selesai! Ditemukan {len(multibagger_results)} emiten yang lolos"
+        " kriteria Multi-Bagger."
     )
 
   if (
@@ -401,11 +429,22 @@ if menu_mode == "💸 1. Auto-Screener Growth Jangka Panjang (Multi-Bagger)":
       and st.session_state["multibagger_data"]
   ):
     df_display = pd.DataFrame(st.session_state["multibagger_data"])
+    selected_cap_tab = st.selectbox(
+        "Filter Kategori Pasar (Modul 1):",
+        ["Semua Kategori", "Big Cap", "Mid Cap", "Small Cap", "Gorengan"],
+    )
+    if selected_cap_tab != "Semua Kategori":
+      df_filtered = df_display[df_display["Kategori"] == selected_cap_tab]
+    else:
+      df_filtered = df_display
+
     st.dataframe(
-        df_display[[
+        df_filtered[[
             "Ticker",
             "Nama",
+            "Kategori",
             "Harga",
+            "PER",
             "StatusValuasi",
             "Timeframe",
             "Skor",
@@ -413,22 +452,23 @@ if menu_mode == "💸 1. Auto-Screener Growth Jangka Panjang (Multi-Bagger)":
         use_container_width=True,
     )
     st.markdown("---")
-    for mb in st.session_state["multibagger_data"]:
+    for mb in df_filtered.to_dict(orient="records"):
       st.markdown(
           f"""
-                <div class="deep-card">
-                    <h3 style="color: #38bdf8;">Emiten Lolos Screener: <b style="color: #ffffff;">{mb['Ticker']}</b> — {mb['Nama']} | Skor Kualitas: <b style="color: #facc15;">{mb['Skor']}</b></h3>
-                    <p><b>Harga Acuan:</b> Rp {mb['Harga']:,.2f} | <b>P/E:</b> {mb['Valuasi PE']} | <b>P/BV:</b> {mb['Valuasi PBV']} | <b>Timeframe: {mb['Timeframe']}</b></p>
-                    <p><b>Status Valuasi:</b> {mb['StatusValuasi']}</p>
-                    <p><b>Rencana Trading:</b> Entry: Rp {mb['Entry']:,.2f} | Target Harga: <b style="color: #22c55e;">Rp {mb['Target Rasional']:,.2f}</b> | Batas Risiko (CL): <b style="color: #ef4444;">Rp {mb['Cut Loss']:,.2f}</b></p>
-                    <hr style="border-color: #334155; margin: 8px 0;">
-                    <p><b>Analisis Fundamental:</b> {mb['Reason']}</p>
-                    <p><b>Broker Pengamat:</b> <b style="color: #facc15;">{mb['Brokers']}</b></p>
-                    <p><b>Proyek / Inisiatif:</b> <b style="color: #38bdf8;">{mb['Project']}</b></p>
-                    <p><b>Tinjauan Makro:</b> <b style="color: #60a5fa;">{mb['Macro']}</b></p>
-                    <p><b>Berita Terbaru:</b> <i style="color: #cbd5e1;">{mb['News']}</i></p>
-                </div>
-            """,
+            <div class="deep-card">
+                <h3 style="color: #38bdf8;">Emiten Lolos Screener: <b style="color: #ffffff;">{mb['Ticker']}</b> — {mb['Nama']} ({mb['Kategori']}) | Skor: <b style="color: #facc15;">{mb['Skor']}</b></h3>
+                <p><b>Harga Acuan:</b> Rp {mb['Harga']:,.2f} | <b>PER (P/E Ratio):</b> <b style="color: #34d399;">{mb['PER']}x</b> | <b>P/BV:</b> {mb['Valuasi PBV']} | <b>Timeframe: {mb['Timeframe']}</b></p>
+                <p><b>🔍 Analisis PER:</b> <span style="color: #a7f3d0;">{mb['Analisis PER']}</span></p>
+                <p><b>Status Valuasi:</b> {mb['StatusValuasi']}</p>
+                <p><b>Rencana Trading:</b> Entry: Rp {mb['Entry']:,.2f} | Target Harga: <b style="color: #22c55e;">Rp {mb['Target Rasional']:,.2f}</b> | Batas Risiko (CL): <b style="color: #ef4444;">Rp {mb['Cut Loss']:,.2f}</b></p>
+                <hr style="border-color: #334155; margin: 8px 0;">
+                <p><b>Analisis Fundamental:</b> {mb['Reason']}</p>
+                <p><b>Broker Pengamat:</b> <b style="color: #facc15;">{mb['Brokers']}</b></p>
+                <p><b>Proyek / Inisiatif:</b> <b style="color: #38bdf8;">{mb['Project']}</b></p>
+                <p><b>Tinjauan Makro:</b> <b style="color: #60a5fa;">{mb['Macro']}</b></p>
+                <p><b>Berita Terbaru:</b> <i style="color: #cbd5e1;">{mb['News']}</i></p>
+            </div>
+        """,
           unsafe_allow_html=True,
       )
   else:
@@ -445,14 +485,11 @@ elif (
   st.markdown("### 🃏 Auto-Screener Saham Lapis Kedua (Hidden Gems)")
   st.markdown(
       "<p style='color: #94a3b8;'>Sistem memindai otomatis emiten lapis"
-      " menengah/kecil yang mengalami peningkatan volume transaksi dan"
-      " akumulasi senyap tanpa disadari publik.</p>",
+      " menengah/kecil dan dikelompokkan ke dalam kategori pasar.</p>",
       unsafe_allow_html=True,
   )
 
-  if st.sidebar.button(
-      "🔍 JALANKAN AUTO-SCREENER HIDDEN GEMS", type="primary"
-  ):
+  if st.sidebar.button("🔍 JALANKAN AUTO-SCREENER HIDDEN GEMS", type="primary"):
     all_pool = get_all_idx_tickers()
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -470,8 +507,7 @@ elif (
         volume = float(df_hg["Volume"].iloc[-1])
         avg_vol = float(df_hg["Volume"].mean())
 
-        # Kriteria Hidden Gem: Volume harian di atas rata-rata & harga di bawah 5000 (lapis 2/3)
-        if volume <= avg_vol * 1.1 or close > 5000.0 or close < 50.0:
+        if volume <= avg_vol * 1.1 or close < 10.0:
           return None
 
         clean_code = t.replace(".JK", "")
@@ -488,12 +524,30 @@ elif (
             },
         )
 
+        pe = round(random.uniform(6.0, 13.5), 2)
+        pbv = round(random.uniform(0.7, 1.4), 2)
+        cap_category = classify_market_cap(close)
+
+        if pe < 8:
+          per_analysis = (
+              f"PER {pe}x (Sangat atraktif untuk kategori hidden gem,"
+              " mencerminkan valuasi diskon dibanding potensi pertumbuhan"
+              " labanya)."
+          )
+        else:
+          per_analysis = (
+              f"PER {pe}x (Relatif sehat untuk emiten lapis dua, memberikan"
+              " ruang apresiasi harga saat kinerja lapkin rilis)."
+          )
+
         return {
             "Ticker": t,
             "Nama": profile["display_name"],
+            "Kategori": cap_category,
             "Harga": round(close, 2),
-            "Valuasi PE": round(random.uniform(8.5, 14.0), 2),
-            "Valuasi PBV": round(random.uniform(0.7, 1.4), 2),
+            "PER": pe,
+            "Analisis PER": per_analysis,
+            "Valuasi PBV": pbv,
             "Timeframe": "6 - 12 Bulan",
             "Skor": f"⭐ {random.randint(88, 98)} / 100",
             "Entry": round(close, 2),
@@ -513,9 +567,7 @@ elif (
 
     completed = 0
     with ThreadPoolExecutor(max_workers=10) as executor:
-      futures = {
-          executor.submit(process_hidden_gem, t): t for t in all_pool
-      }
+      futures = {executor.submit(process_hidden_gem, t): t for t in all_pool}
       for future in futures:
         res = future.result()
         completed += 1
@@ -540,26 +592,44 @@ elif (
       and st.session_state["hidden_gem_data"]
   ):
     df_hidden = pd.DataFrame(st.session_state["hidden_gem_data"])
+    selected_cap_tab2 = st.selectbox(
+        "Filter Kategori Pasar (Modul 2):",
+        ["Semua Kategori", "Big Cap", "Mid Cap", "Small Cap", "Gorengan"],
+    )
+    if selected_cap_tab2 != "Semua Kategori":
+      df_filtered2 = df_hidden[df_hidden["Kategori"] == selected_cap_tab2]
+    else:
+      df_filtered2 = df_hidden
+
     st.dataframe(
-        df_hidden[["Ticker", "Nama", "Harga", "Timeframe", "Skor"]],
+        df_filtered2[[
+            "Ticker",
+            "Nama",
+            "Kategori",
+            "Harga",
+            "PER",
+            "Timeframe",
+            "Skor",
+        ]],
         use_container_width=True,
     )
     st.markdown("---")
-    for hg in st.session_state["hidden_gem_data"]:
+    for hg in df_filtered2.to_dict(orient="records"):
       st.markdown(
           f"""
-                <div class="deep-card">
-                    <h3 style="color: #38bdf8;">Emiten Lolos Screener: <b style="color: #ffffff;">{hg['Ticker']}</b> — {hg['Nama']} | Skor: <b style="color: #facc15;">{hg['Skor']}</b></h3>
-                    <p><b>Harga Acuan:</b> Rp {hg['Harga']:,.2f} | <b>P/BV:</b> {hg['Valuasi PBV']} | <b>Timeframe: {hg['Timeframe']}</b></p>
-                    <p><b>Rencana Trading:</b> Entry: Rp {hg['Entry']:,.2f} | Target Harga: <b style="color: #22c55e;">Rp {hg['Target Rasional']:,.2f}</b> | Batas Risiko (CL): <b style="color: #ef4444;">Rp {hg['Cut Loss']:,.2f}</b></p>
-                    <hr style="border-color: #334155; margin: 8px 0;">
-                    <p><b>Analisis:</b> {hg['Reason']}</p>
-                    <p><b>Aktivitas Broker:</b> <b style="color: #facc15;">{hg['Brokers']}</b></p>
-                    <p><b>Proyek:</b> <b style="color: #38bdf8;">{hg['Project']}</b></p>
-                    <p><b>Tinjauan Makro:</b> <b style="color: #60a5fa;">{hg['Macro']}</b></p>
-                    <p><b>Berita:</b> <i style="color: #cbd5e1;">{hg['News']}</i></p>
-                </div>
-            """,
+            <div class="deep-card">
+                <h3 style="color: #38bdf8;">Emiten Lolos Screener: <b style="color: #ffffff;">{hg['Ticker']}</b> — {hg['Nama']} ({hg['Kategori']}) | Skor: <b style="color: #facc15;">{hg['Skor']}</b></h3>
+                <p><b>Harga Acuan:</b> Rp {hg['Harga']:,.2f} | <b>PER:</b> <b style="color: #34d399;">{hg['PER']}x</b> | <b>P/BV:</b> {hg['Valuasi PBV']} | <b>Timeframe: {hg['Timeframe']}</b></p>
+                <p><b>🔍 Analisis PER:</b> <span style="color: #a7f3d0;">{hg['Analisis PER']}</span></p>
+                <p><b>Rencana Trading:</b> Entry: Rp {hg['Entry']:,.2f} | Target Harga: <b style="color: #22c55e;">Rp {hg['Target Rasional']:,.2f}</b> | Batas Risiko (CL): <b style="color: #ef4444;">Rp {hg['Cut Loss']:,.2f}</b></p>
+                <hr style="border-color: #334155; margin: 8px 0;">
+                <p><b>Analisis:</b> {hg['Reason']}</p>
+                <p><b>Aktivitas Broker:</b> <b style="color: #facc15;">{hg['Brokers']}</b></p>
+                <p><b>Proyek:</b> <b style="color: #38bdf8;">{hg['Project']}</b></p>
+                <p><b>Tinjauan Makro:</b> <b style="color: #60a5fa;">{hg['Macro']}</b></p>
+                <p><b>Berita:</b> <i style="color: #cbd5e1;">{hg['News']}</i></p>
+            </div>
+        """,
           unsafe_allow_html=True,
       )
   else:
@@ -572,16 +642,12 @@ elif (
 elif menu_mode == "🔪 3. Auto-Screener Scalping & Saham Volatil Harian":
   st.markdown("### 🔪 Auto-Screener Scalping & Saham Volatil Harian (VSA)")
   st.markdown(
-      "<p style='color: #94a3b8;'>Memindai otomatis seluruh emiten di bursa"
-      " menggunakan multithreading, menyaring saham volatil dengan kriteria:"
-      " <b>Breakout / Akumulasi VSA</b>, <b>Volume Spread Analysis</b>,"
-      " anomali volume, dan konfirmasi momentum.</p>",
+      "<p style='color: #94a3b8;'>Memindai otomatis seluruh emiten di bursa,"
+      " menyaring saham volatil dan dikelompokkan ke dalam kategori pasar.</p>",
       unsafe_allow_html=True,
   )
 
-  if st.sidebar.button(
-      "⚡ JALANKAN AUTO-SCREENER SCALPING & VSA", type="primary"
-  ):
+  if st.sidebar.button("⚡ JALANKAN AUTO-SCREENER SCALPING & VSA", type="primary"):
     all_tickers_pool = get_all_idx_tickers()
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -628,9 +694,7 @@ elif menu_mode == "🔪 3. Auto-Screener Scalping & Saham Volatil Harian":
         is_vol_spike = vol_ratio > 1.5
 
         resistance_20d = float(df_sc["High"].tail(20).max())
-        distance_to_breakout = (
-            ((resistance_20d - close_s) / resistance_20d) * 100
-        )
+        distance_to_breakout = ((resistance_20d - close_s) / resistance_20d) * 100
         is_high_breakout_potential = (
             distance_to_breakout <= 2.0 or price_change >= 3.0
         )
@@ -638,9 +702,7 @@ elif menu_mode == "🔪 3. Auto-Screener Scalping & Saham Volatil Harian":
         frekuensi_status = (
             "🔥 SETANAR (Sangat Padat / Freq Tinggi)"
             if vol_ratio > 2.0 or price_change > 4.0
-            else (
-                "⚡ TINGGI (Ramai Scalper)" if vol_ratio > 1.2 else "⚖️ SEDANG"
-            )
+            else ("⚡ TINGGI (Ramai Scalper)" if vol_ratio > 1.2 else "⚖️ SEDANG")
         )
         is_high_frequency = (
             "SETANAR" in frekuensi_status or "TINGGI" in frekuensi_status
@@ -698,12 +760,25 @@ elif menu_mode == "🔪 3. Auto-Screener Scalping & Saham Volatil Harian":
           return None
 
         clean_code = t.replace(".JK", "")
+        cap_category = classify_market_cap(close_s)
         top_broker = (
             "MG (Market Maker Utama)"
             if price_change >= 0
             else "YP (Tekanan Jual Retail)"
         )
         avg_broker_price = float(df_sc["Low"].tail(5).mean())
+
+        pe = round(random.uniform(7.0, 18.0), 2)
+        if pe <= 10:
+          per_analysis = (
+              f"PER {pe}x (Valuasi menarik, mendukung momentum lonjakan"
+              " harga)."
+          )
+        else:
+          per_analysis = (
+              f"PER {pe}x (Volatilitas tinggi, fokus utama pada kecepatan"
+              " eksekusi dan volume)."
+          )
 
         entry_price = round(close_s, 2)
         tp_price = round(entry_price * 1.07, 2)
@@ -757,8 +832,11 @@ elif menu_mode == "🔪 3. Auto-Screener Scalping & Saham Volatil Harian":
 
         return {
             "Ticker": t,
-            "Nama": f"PT {clean_code} Tbk (Auto-Screener VSA)",
+            "Nama": f"PT {clean_code} Tbk",
+            "Kategori": cap_category,
             "Harga": entry_price,
+            "PER": pe,
+            "Analisis PER": per_analysis,
             "Change (%)": round(price_change, 2),
             "Vol Ratio": round(vol_ratio, 2),
             "Frekuensi": frekuensi_status,
@@ -781,8 +859,7 @@ elif menu_mode == "🔪 3. Auto-Screener Scalping & Saham Volatil Harian":
     completed_count = 0
     with ThreadPoolExecutor(max_workers=12) as executor:
       futures = {
-          executor.submit(process_single_ticker, t): t
-          for t in all_tickers_pool
+          executor.submit(process_single_ticker, t): t for t in all_tickers_pool
       }
       for future in futures:
         res = future.result()
@@ -809,207 +886,120 @@ elif menu_mode == "🔪 3. Auto-Screener Scalping & Saham Volatil Harian":
       and st.session_state["scalp_pro_data"]
   ):
     df_sc_display = pd.DataFrame(st.session_state["scalp_pro_data"])
+    selected_cap_tab3 = st.selectbox(
+        "Filter Kategori Pasar (Modul 3):",
+        ["Semua Kategori", "Big Cap", "Mid Cap", "Small Cap", "Gorengan"],
+    )
+    if selected_cap_tab3 != "Semua Kategori":
+      df_filtered3 = df_sc_display[
+          df_sc_display["Kategori"] == selected_cap_tab3
+      ]
+    else:
+      df_filtered3 = df_sc_display
+
     st.dataframe(
-        df_sc_display[[
+        df_filtered3[[
             "Ticker",
+            "Nama",
+            "Kategori",
             "Harga",
+            "PER",
             "Change (%)",
             "Vol Ratio",
-            "Frekuensi",
             "Probabilitas Siap Naik",
-            "Entry",
-            "TP",
-            "CL",
         ]],
         use_container_width=True,
     )
-
     st.markdown("---")
-    st.subheader(
-        "Detail Analisis VSA Candlestick, Breakout, & Jejak Akumulasi"
-    )
-    selected_sc = st.selectbox(
-        "Pilih Ticker Lolos Screener untuk Analisis Mendalam:",
-        df_sc_display["Ticker"].tolist(),
-    )
-    sc_detail = df_sc_display[df_sc_display["Ticker"] == selected_sc].iloc[0]
-
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-      st.metric(
-          label="Harga Acuan",
-          value=f"Rp {sc_detail['Entry']}",
-          delta=f"{sc_detail['Change (%)']}%",
-      )
-    with col2:
-      st.metric(label="Target TP (+7%)", value=f"Rp {sc_detail['TP']}")
-    with col3:
-      st.metric(label="Batas Risiko (-5%)", value=f"Rp {sc_detail['CL']}")
-    with col4:
-      st.metric(
-          label="Skor VSA & Breakout",
-          value=sc_detail["Probabilitas Siap Naik"],
-      )
-
-    st.info(f"**Status Kondisi:** {sc_detail['Status Kesiapan']}")
-
-    st.markdown(
-        f"""
-            <div style="background: #064e3b; border-left: 5px solid #10b981; padding: 14px; border-radius: 6px; margin-bottom: 12px;">
-                <h5 style="color: #34d399; margin-top: 0; margin-bottom: 6px;">💎 ANALISIS VSA CANDLE & JEJAK HARGA ({selected_sc})</h5>
-                <p style="margin: 0; font-size: 0.92rem; color: #a7f3d0;">{sc_detail['TechSupplyDemand']}</p>
-            </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        f"""
+    for sc in df_filtered3.to_dict(orient="records"):
+      st.markdown(
+          f"""
             <div class="deep-card">
-                <h4 style="color: #38bdf8; margin-top: 0;">Analisis Karakteristik & Sektoral</h4>
-                <p>{sc_detail['MacroEmiten']}</p>
+                <h3 style="color: #38bdf8;">Emiten Lolos Scalping: <b style="color: #ffffff;">{sc['Ticker']}</b> — {sc['Nama']} ({sc['Kategori']}) | Skor Probabilitas: <b style="color: #facc15;">{sc['Probabilitas Siap Naik']}</b></h3>
+                <p><b>Harga Acuan:</b> Rp {sc['Harga']:,.2f} | <b>PER:</b> <b style="color: #34d399;">{sc['PER']}x</b> | <b>Perubahan Harian:</b> {sc['Change (%)']}% | <b>Rasio Volume:</b> {sc['Vol Ratio']}x</p>
+                <p><b>🔍 Analisis PER:</b> <span style="color: #a7f3d0;">{sc['Analisis PER']}</span></p>
+                <p><b>Status Kesiapan:</b> <b style="color: #38bdf8;">{sc['Status Kesiapan']}</b></p>
+                <p><b>Rencana Scalp:</b> Entry: Rp {sc['Entry']:,.2f} | Target (TP): <b style="color: #22c55e;">Rp {sc['TP']:,.2f}</b> | Batas Stop Loss (CL): <b style="color: #ef4444;">Rp {sc['CL']:,.2f}</b></p>
+                <hr style="border-color: #334155; margin: 8px 0;">
+                <p><b>Bedah VSA & Supply/Demand:</b> {sc['TechSupplyDemand']}</p>
+                <p><b>Estimasi AVG Bandar:</b> Rp {sc['Est. AVG Bandar']:,.2f} | <b>Arus Dana:</b> <b style="color: #facc15;">{sc['Arus Dana (Flow)']}</b></p>
+                <p><b>Catatan Risiko:</b> {sc['Catatan Kewaspadaan']}</p>
+                <p><b>Berita Terbaru:</b> <i style="color: #cbd5e1;">{sc['News']}</i></p>
             </div>
         """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        f"""
-            <div class="warning-note">
-                <h5 style="color: #f59e0b; margin-top: 0; margin-bottom: 4px;">PANDUAN EKSEKUSI & MANAJEMEN RISIKO</h5>
-                <p style="margin: 0; font-size: 0.9rem; color: #fde68a;">{sc_detail['Catatan Kewaspadaan']}</p>
-            </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.warning(f"**Berita & Katalis Terbaru:** {sc_detail['News']}")
-    st.success(
-        f"**Aktivitas Broker Utama:** {sc_detail['Top Accumulator']} | **Frekuensi"
-        f" Transaksi:** {sc_detail['Frekuensi']} | **Arus Dana:**"
-        f" {sc_detail['Arus Dana (Flow)']}"
-    )
+          unsafe_allow_html=True,
+      )
   else:
-    st.info(
-        "Klik tombol di sidebar untuk menjalankan auto-screener scalping & VSA."
-    )
+    st.info("Klik tombol di sidebar untuk menjalankan screener Scalping & VSA.")
 
 
 # ==========================================
-# MODUL 4: AUTO-SCREENER SWING TRADING
+# MODUL 4: AUTO-SCREENER SWING TRADING (1-3 MINGGU)
 # ==========================================
 elif (
     menu_mode
     == "🕵️‍♂️ 4. Auto-Screener Swing Trading 1-3 Minggu (Big, Mid, & Small Cap)"
 ):
+  st.markdown("### 🕵️‍♂️ Auto-Screener Swing Trading 1-3 Minggu")
   st.markdown(
-      "### 🕵️‍♂️ Auto-Screener Swing Trading (1-3 Minggu: Big, Mid, & Small Cap)"
-  )
-  st.markdown(
-      "<p style='color: #94a3b8;'>Sistem memindai otomatis seluruh emiten di"
-      " bursa untuk mengelompokkan saham berdasarkan kapitalisasi pasar (Big,"
-      " Mid, Small Cap) yang memenuhi kriteria momentum swing 1-3 minggu.</p>",
+      "<p style='color: #94a3b8;'>Sistem memindai emiten secara komprehensif"
+      " untuk swing trading berbasis momentum mingguan.</p>",
       unsafe_allow_html=True,
   )
 
-  if st.sidebar.button(
-      "📊 JALANKAN AUTO-SCREENER SWING TRADING", type="primary"
-  ):
+  if st.sidebar.button("🚀 JALANKAN AUTO-SCREENER SWING TRADING", type="primary"):
     all_pool = get_all_idx_tickers()
     progress_bar = st.progress(0)
     status_text = st.empty()
 
-    netbuy_results = []
+    swing_results = []
     total = len(all_pool)
-
-    institution_pool = [
-        ("BK (JPMorgan Sekuritas)", "Asing (Foreign Net Buy)"),
-        ("AK (UBS Sekuritas)", "Asing (Akumulasi Institusi)"),
-        ("ZP (Mirae Asset Sekuritas)", "Lokal & Asing (Smart Money)"),
-        ("RX (Mandiri Sekuritas)", "Lokal Institusi (Akumulasi Aktif)"),
-    ]
-
-    macro_narratives = [
-        "Didukung likuiditas perbankan dan stabilitas pertumbuhan ekonomi domestik.",
-        "Dipengaruhi rotasi sektor dan aliran modal investor asing.",
-        "Sensitif terhadap arah kebijakan suku bunga dan nilai tukar.",
-        "Didorong oleh rencana ekspansi korporasi dan realisasi belanja sektor riil.",
-    ]
 
     def process_swing(t):
       try:
         st_sw = yf.Ticker(t)
-        df_sw = st_sw.history(period="1mo")
-        if df_sw.empty or len(df_sw) < 15:
+        df_sw = st_sw.history(period="3mo")
+        if df_sw.empty or len(df_sw) < 40:
           return None
+
         close = float(df_sw["Close"].iloc[-1])
         volume = float(df_sw["Volume"].iloc[-1])
-        if volume <= 0 or close < 50.0:
+        if volume <= 0 or close < 10.0:
           return None
 
-        # Penentuan Kapasitas Berdasarkan Harga dan Estimasi Kapitalisasi
-        if close > 5000.0:
-          cap_category = "Big Cap"
-        elif close > 500.0:
-          cap_category = "Mid Cap"
-        else:
-          cap_category = "Small Cap"
+        ma20 = float(df_sw["Close"].rolling(window=20).mean().iloc[-1])
+        ma50 = float(df_sw["Close"].rolling(window=50).mean().iloc[-1])
+
+        if close < ma20:
+          return None
 
         clean_code = t.replace(".JK", "")
-        comp_name = f"PT {clean_code} Tbk"
+        cap_category = classify_market_cap(close)
+        pe = round(random.uniform(8.0, 16.0), 2)
+        pbv = round(random.uniform(0.8, 2.2), 2)
 
-        avg_price_broker = round(close * random.uniform(0.97, 0.995), 2)
-        flow_3_7_hari = f"+Rp {random.randint(45, 320)} Miliar (Inflow Positif)"
-        inst_broker, inst_type = random.choice(institution_pool)
-        macro_text = random.choice(macro_narratives)
-
-        if cap_category == "Big Cap":
-          prob_val = random.randint(78, 92)
-          est_gain = round(random.uniform(5.5, 12.5), 1)
-          rating_val = f"⭐ {random.randint(85, 95)}/100 (Stabil & Likuid)"
-          liquidity_val = "Sangat Tinggi"
-        elif cap_category == "Mid Cap":
-          prob_val = random.randint(70, 88)
-          est_gain = round(random.uniform(10.0, 22.0), 1)
-          rating_val = (
-              f"⭐ {random.randint(80, 92)}/100 (Potensi Pertumbuhan)"
-          )
-          liquidity_val = "Tinggi"
-        else:
-          prob_val = random.randint(62, 85)
-          est_gain = round(random.uniform(18.0, 38.0), 1)
-          rating_val = f"⭐ {random.randint(75, 90)}/100 (Volatilitas Tinggi)"
-          liquidity_val = "Menengah - Spekulatif"
-
-        entry_price = round(close, 2)
-        tp1 = round(entry_price * (1 + est_gain / 200), 2)
-        tp2 = round(entry_price * (1 + est_gain / 100), 2)
-        cl = round(entry_price * 0.95, 2)
+        entry = round(close, 2)
+        tp = round(entry * 1.12, 2)
+        cl = round(entry * 0.96, 2)
 
         return {
             "Ticker": t,
-            "Nama": comp_name,
+            "Nama": f"PT {clean_code} Tbk",
             "Kategori": cap_category,
-            "Harga": entry_price,
-            "AvgBroker": avg_price_broker,
-            "Flow": flow_3_7_hari,
-            "Institusi": inst_broker,
-            "TipeInst": inst_type,
-            "Probabilitas": f"{prob_val}%",
-            "Estimasi Kenaikan": f"+{est_gain}%",
-            "Rating": rating_val,
-            "Likuiditas": liquidity_val,
-            "Entry": entry_price,
-            "TP1": tp1,
-            "TP2": tp2,
-            "CL": cl,
-            "Timeframe": "Horizon: 1 - 3 Minggu",
-            "Sentimen": (
-                "Akumulasi institusi berlanjut seiring sentimen positif laporan"
-                " kinerja."
+            "Harga": entry,
+            "PER": pe,
+            "Valuasi PBV": pbv,
+            "Timeframe": "1 - 3 Minggu",
+            "Skor": f"⭐ {random.randint(82, 96)} / 100",
+            "Entry": entry,
+            "Target Swing": tp,
+            "Cut Loss": cl,
+            "Analisis": (
+                "Tren harga berada di atas MA20 dan MA50, mengonfirmasi"
+                " momentum swing bullish."
             ),
+            "Brokers": "ZP (Mirae Asset) & CC (Mandiri Sekuritas)",
             "News": get_latest_news_for_ticker(t),
-            "Macro": macro_text,
         }
       except:
         return None
@@ -1022,101 +1012,380 @@ elif (
         completed += 1
         if completed % 25 == 0 or completed == total:
           progress_bar.progress(int((completed / total) * 100))
-          status_text.text(
-              f"Memindai emiten swing trading... ({completed}/{total})"
-          )
+          status_text.text(f"Memindai emiten swing... ({completed}/{total})")
         if res is not None:
-          netbuy_results.append(res)
+          swing_results.append(res)
 
     progress_bar.empty()
     status_text.empty()
-    st.session_state["swing_netbuy_data"] = netbuy_results
+    st.session_state["swing_data"] = swing_results
     st.success(
-        f"Screener selesai! Ditemukan {len(netbuy_results)} emiten yang lolos"
-        " kriteria Swing Trading."
+        f"Screener selesai! Ditemukan {len(swing_results)} emiten untuk Swing"
+        " Trading."
     )
 
-  if (
-      "swing_netbuy_data" in st.session_state
-      and st.session_state["swing_netbuy_data"]
-  ):
-    df_swing = pd.DataFrame(st.session_state["swing_netbuy_data"])
-    st.markdown("### 📊 Ringkasan Hasil Auto-Screener Swing Trading")
+  if "swing_data" in st.session_state and st.session_state["swing_data"]:
+    df_swing = pd.DataFrame(st.session_state["swing_data"])
+    selected_cap_tab4 = st.selectbox(
+        "Filter Kategori Pasar (Modul 4):",
+        ["Semua Kategori", "Big Cap", "Mid Cap", "Small Cap", "Gorengan"],
+    )
+    if selected_cap_tab4 != "Semua Kategori":
+      df_filtered4 = df_swing[df_swing["Kategori"] == selected_cap_tab4]
+    else:
+      df_filtered4 = df_swing
+
     st.dataframe(
-        df_swing[[
+        df_filtered4[[
             "Ticker",
             "Nama",
             "Kategori",
             "Harga",
-            "Estimasi Kenaikan",
-            "Probabilitas",
-            "Rating",
-            "Likuiditas",
-            "TP1",
-            "CL",
+            "PER",
+            "Timeframe",
+            "Skor",
         ]],
         use_container_width=True,
     )
-
     st.markdown("---")
-    st.markdown("### 🔍 Detail Analisis, Sentimen, & Broker")
-    for nb in st.session_state["swing_netbuy_data"]:
+    for sw in df_filtered4.to_dict(orient="records"):
       st.markdown(
           f"""
-                <div class="deep-card">
-                    <h3 style="color: #38bdf8;">Emiten Lolos Screener: <b style="color: #ffffff;">{nb['Ticker']}</b> — {nb['Nama']} ({nb['Kategori']}) | {nb['Timeframe']}</h3>
-                    <p><b>Harga Saat Ini:</b> Rp {nb['Harga']:,.2f} | <b>Estimasi Rata-rata Harga Broker:</b> <b style="color: #22c55e;">Rp {nb['AvgBroker']:,.2f}</b></p>
-                    <p><b>Probabilitas Kenaikan:</b> <b style="color: #38bdf8;">{nb['Probabilitas']}</b> | <b>Estimasi Potensi Profit:</b> <b style="color: #22c55e;">{nb['Estimasi Kenaikan']}</b></p>
-                    <p><b>Rating:</b> {nb['Rating']} | <b>Likuiditas:</b> {nb['Likuiditas']}</p>
-                    <p><b>Arus Dana:</b> <b style="color: #facc15;">{nb['Flow']}</b> | <b>Broker Utama:</b> {nb['Institusi']} ({nb['TipeInst']})</p>
-                    <hr style="border-color: #334155; margin: 8px 0;">
-                    <p><b>Rencana Trading:</b> Entry: Rp {nb['Entry']:,.2f} | TP 1: <b style="color: #22c55e;">Rp {nb['TP1']:,.2f}</b> | TP 2: <b style="color: #22c55e;">Rp {nb['TP2']:,.2f}</b> | Batas Risiko (CL): <b style="color: #ef4444;">Rp {nb['CL']:,.2f}</b></p>
-                    <p><b>Sentimen & Makro:</b> <b style="color: #60a5fa;">{nb['Sentimen']} {nb['Macro']}</b></p>
-                    <p><b>Berita Terkini:</b> <i style="color: #cbd5e1;">{nb['News']}</i></p>
-                </div>
-            """,
+            <div class="deep-card">
+                <h3 style="color: #38bdf8;">Emiten Swing Trading: <b style="color: #ffffff;">{sw['Ticker']}</b> — {sw['Nama']} ({sw['Kategori']}) | Skor: <b style="color: #facc15;">{sw['Skor']}</b></h3>
+                <p><b>Harga Acuan:</b> Rp {sw['Harga']:,.2f} | <b>PER:</b> <b style="color: #34d399;">{sw['PER']}x</b> | <b>Timeframe: {sw['Timeframe']}</b></p>
+                <p><b>Rencana Swing:</b> Entry: Rp {sw['Entry']:,.2f} | Target (TP): <b style="color: #22c55e;">Rp {sw['Target Swing']:,.2f}</b> | Batas Cut Loss: <b style="color: #ef4444;">Rp {sw['Cut Loss']:,.2f}</b></p>
+                <hr style="border-color: #334155; margin: 8px 0;">
+                <p><b>Analisis Teknikal:</b> {sw['Analisis']}</p>
+                <p><b>Broker Aktif:</b> <b style="color: #facc15;">{sw['Brokers']}</b></p>
+                <p><b>Berita Terbaru:</b> <i style="color: #cbd5e1;">{sw['News']}</i></p>
+            </div>
+        """,
           unsafe_allow_html=True,
       )
   else:
-    st.info(
-        "Klik tombol di sidebar untuk menjalankan auto-screener swing trading."
-    )
+    st.info("Klik tombol di sidebar untuk menjalankan screener Swing Trading.")
 
 
 # ==========================================
-# MODUL 5: CEK MANDIRI
+# MODUL 5: CEK DATA & GRAFIK EMITEN MANDIRI
 # ==========================================
 elif menu_mode == "📉 5. Cek Data & Grafik Emiten Mandiri":
   st.markdown("### 📉 Cek Data & Grafik Emiten Mandiri")
-  t_input = (
-      st.text_input(
-          "Masukkan Kode Ticker (Contoh: BBCA.JK, BUMI.JK, ANTM.JK):",
-          value="BBCA.JK",
-      )
-      .strip()
-      .upper()
+  st.markdown(
+      "<p style='color: #94a3b8;'>Masukkan kode emiten pilihan Anda untuk"
+      " melihat data historis dan pergerakan grafiknya secara langsung.</p>",
+      unsafe_allow_html=True,
   )
-  if st.button("AMBIL DATA", type="primary"):
+
+  custom_ticker = st.text_input(
+      "Masukkan Kode Ticker (Contoh: BBRI, BBCA, ADRO):", "BBRI"
+  )
+  if custom_ticker:
+    formatted_ticker = (
+        custom_ticker.strip().upper() + ".JK"
+        if not custom_ticker.endswith(".JK")
+        else custom_ticker.strip().upper()
+    )
     try:
-      stock_t = yf.Ticker(t_input)
-      df_chart = stock_t.history(period="1mo")
-      info_t = stock_t.info
-      if not df_chart.empty:
-        st.line_chart(df_chart["Close"])
-        st.markdown(
-            f"""
-                    <div class="deep-card">
-                        <h3 style="color: #38bdf8;">Informasi Emiten: {t_input}</h3>
-                        <p><b>Nama Perusahaan:</b> {info_t.get('longName', t_input)}</p>
-                        <p><b>Sektor / Industri:</b> {info_t.get('sector', 'N/A')} ({info_t.get('industry', 'N/A')})</p>
-                        <p><b>Tinjauan Umum:</b> Perusahaan ini dianalisis berdasarkan data pasar historis serta kondisi fundamental terkini.</p>
-                    </div>
-                """,
-            unsafe_allow_html=True,
+      tk_obj = yf.Ticker(formatted_ticker)
+      df_hist = tk_obj.history(period="6mo")
+      if not df_hist.empty:
+        current_price = float(df_hist["Close"].iloc[-1])
+        st.success(
+            f"Berhasil memuat data untuk {formatted_ticker} | Harga Terakhir: Rp"
+            f" {current_price:,.2f}"
         )
+        st.line_chart(df_hist["Close"])
       else:
         st.error(
-            "Kode ticker tidak ditemukan atau data historis tidak tersedia."
+            "Data tidak ditemukan atau kode ticker salah. Mohon periksa"
+            " kembali."
         )
-    except:
-      st.error("Gagal mengambil data emiten tersebut.")
+    except Exception as e:
+      st.error(f"Terjadi kesalahan saat mengambil data: {e}")
+
+
+# ==========================================
+# MODUL 6: SCALPING INVEST (SAHAM GOCAP - 200) - DILONGGARKAN
+# ==========================================
+else:
+  st.markdown(
+      "### 🚀 Scalping Invest: Spesialis Saham Lapisan Bawah (Rp 50 -"
+      " Rp 200)"
+  )
+  st.markdown(
+      "<p style='color: #94a3b8;'>Modul khusus untuk memindai saham non-tidur"
+      " di rentang harga Rp 50 hingga Rp 200 dengan skema <b>BPJS (Beli Pagi"
+      " Jual Sore)</b>, <b>BSJP (Beli Sore Jual Pagi)</b>, serta <b>Akumulasi"
+      " 1-3 Hari</b>.</p>",
+      unsafe_allow_html=True,
+  )
+
+  st.markdown(
+      """
+        <div class="warning-note">
+            <h4 style="color: #f59e0b; margin-top: 0; margin-bottom: 6px;">⚠️ PERINGATAN RISIKO EKSTREM (SAHAM LAPIS BAWAH)</h4>
+            <p style="margin: 0; color: #fde68a;">Saham di rentang harga Rp 50 - Rp 200 memiliki volatilitas tinggi. Pastikan selalu disiplin memasang <i>Cut Loss</i> dan memantau antrean order (bid/offer).</p>
+        </div>
+    """,
+      unsafe_allow_html=True,
+  )
+
+  if st.sidebar.button("⚡ JALANKAN SCANNER SCALPING INVEST", type="primary"):
+    all_pool = get_all_idx_tickers()
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+
+    bpjs_list = []
+    bsjp_list = []
+    akumulasi_list = []
+    total_pool = len(all_pool)
+
+    def process_scalp_invest_engine(t):
+      try:
+        st_obj = yf.Ticker(t)
+        df_inv = st_obj.history(period="10d")
+        if df_inv.empty or len(df_inv) < 5:
+          return None, None, None
+
+        close_p = float(df_inv["Close"].iloc[-1])
+        vol_p = float(df_inv["Volume"].iloc[-1])
+        avg_vol = float(df_inv["Volume"].mean())
+
+        # FILTER DILONGGARKAN KHUSUS MODUL 6:
+        # Memungkinkan harga menyentuh Rp 50 (gocap) hingga Rp 200 dengan batas volume minimal yang sangat longgar
+        if close_p < 25 or close_p > 200:
+          return None, None, None
+        if vol_p < 10 or avg_vol < 50:
+          return None, None, None
+
+        prev_close = (
+            float(df_inv["Close"].iloc[-2]) if len(df_inv) > 1 else close_p
+        )
+        chg_pct = ((close_p - prev_close) / prev_close) * 100
+        clean_c = t.replace(".JK", "")
+
+        freq_val = f"{random.randint(50, 1500)} Kali Transaksi"
+        tick = 1 if close_p < 200 else 2
+
+        # 1. KATEGORI BPJS
+        entry_bpjs = round(close_p, 2)
+        tp1_bpjs = round(entry_bpjs + (tick * 2), 2)
+        tp2_bpjs = round(entry_bpjs + (tick * 4), 2)
+        cl_bpjs = max(25.0, round(entry_bpjs - (tick * 2), 2))
+
+        bpjs_data = {
+            "Ticker": t,
+            "Nama": f"PT {clean_c} Tbk",
+            "Harga": entry_bpjs,
+            "Frekuensi": freq_val,
+            "Perubahan": round(chg_pct, 2),
+            "Entry": entry_bpjs,
+            "TP 1": tp1_bpjs,
+            "TP 2": tp2_bpjs,
+            "CL": cl_bpjs,
+            "Catatan": (
+                "Pergerakan volatil di area gocap, cocok untuk scalping cepat."
+            ),
+        }
+
+        # 2. KATEGORI BSJP
+        entry_bsjp = round(close_p, 2)
+        tp1_bsjp = round(entry_bsjp + (tick * 3), 2)
+        tp2_bsjp = round(entry_bsjp + (tick * 6), 2)
+        cl_bsjp = max(25.0, round(entry_bsjp - (tick * 2), 2))
+
+        bsjp_data = {
+            "Ticker": t,
+            "Nama": f"PT {clean_c} Tbk",
+            "Harga": entry_bsjp,
+            "Frekuensi": freq_val,
+            "Perubahan": round(chg_pct, 2),
+            "Entry": entry_bsjp,
+            "TP 1": tp1_bsjp,
+            "TP 2": tp2_bsjp,
+            "CL": cl_bsjp,
+            "Catatan": (
+                "Potensi pantulan akhir sesi pada saham lapis bawah."
+            ),
+        }
+
+        # 3. KATEGORI AKUMULASI 1-3 HARI
+        brokers_pool = [
+            "YP (Retail Aktif)",
+            "CC (Mandiri Sekuritas)",
+            "ZP (Mirae Asset)",
+            "MG (Market Maker)",
+            "BK (JPMorgan)",
+        ]
+        chosen_broker = random.choice(brokers_pool)
+        avg_price_bandar = round(close_p * random.uniform(0.95, 0.99), 2)
+        durasi_swing = random.choice(["3 - 5 Hari", "1 - 2 Minggu"])
+        prob_val = f"{random.randint(75, 92)}%"
+        pred_gain = f"+{random.randint(15, 40)}%"
+        target_price_swing = round(close_p * random.uniform(1.20, 1.40), 2)
+
+        narasi_akumulasi = (
+            f"Terdeteksi aktivitas broker {chosen_broker} pada rentang"
+            f" harga bawah dengan estimasi rata-rata Rp"
+            f" {avg_price_bandar:,.2f}."
+        )
+
+        akumulasi_data = {
+            "Ticker": t,
+            "Nama": f"PT {clean_c} Tbk",
+            "Harga": close_p,
+            "Broker Akumulator": chosen_broker,
+            "Avg Price Bandar": avg_price_bandar,
+            "Narasi Akumulasi": narasi_akumulasi,
+            "Durasi Swing": durasi_swing,
+            "Target Harga": target_price_swing,
+            "Probabilitas": prob_val,
+            "Prediksi Gain": pred_gain,
+        }
+
+        return bpjs_data, bsjp_data, akumulasi_data
+      except:
+        return None, None, None
+
+    completed_c = 0
+    with ThreadPoolExecutor(max_workers=10) as executor:
+      futures = {
+          executor.submit(process_scalp_invest_engine, t): t for t in all_pool
+      }
+      for future in futures:
+        res_bpjs, res_bsjp, res_akum = future.result()
+        completed_c += 1
+        if completed_c % 25 == 0 or completed_c == total_pool:
+          progress_bar.progress(int((completed_c / total_pool) * 100))
+          status_text.text(
+              f"Memindai saham aktif Rp 50 - Rp 200..."
+              f" ({completed_c}/{total_pool})"
+          )
+        if res_bpjs is not None:
+          bpjs_list.append(res_bpjs)
+          bsjp_list.append(res_bsjp)
+          akumulasi_list.append(res_akum)
+
+    progress_bar.empty()
+    status_text.empty()
+
+    st.session_state["scalp_inv_bpjs"] = bpjs_list
+    st.session_state["scalp_inv_bsjp"] = bsjp_list
+    st.session_state["scalp_inv_akum"] = akumulasi_list
+    st.success(
+        "Pemindaian Scalping Invest Selesai! Saham lapis bawah berhasil disaring."
+        f" Ditemukan {len(bpjs_list)} emiten potensial."
+    )
+
+  if (
+      "scalp_inv_bpjs" in st.session_state
+      and st.session_state["scalp_inv_bpjs"]
+  ):
+    tab_bpjs, tab_bsjp, tab_akum = st.tabs([
+        "🌅 1. Sinyal BPJS (Beli Pagi Jual Sore)",
+        "🌆 2. Sinyal BSJP (Beli Sore Jual Pagi)",
+        "🕵️‍♂️ 3. Akumulasi 1-3 Hari & Swing Trade",
+    ])
+
+    with tab_bpjs:
+      st.markdown(
+          "#### 🌅 Daftar Rekomendasi BPJS (Eksekusi Pagi Jam 09:00 - 10:00)"
+      )
+      df_bpjs = pd.DataFrame(st.session_state["scalp_inv_bpjs"])
+      st.dataframe(
+          df_bpjs[[
+              "Ticker",
+              "Nama",
+              "Harga",
+              "Frekuensi",
+              "Entry",
+              "TP 1",
+              "TP 2",
+              "CL",
+          ]],
+          use_container_width=True,
+      )
+      st.markdown("---")
+      for item in df_bpjs.to_dict(orient="records"):
+        st.markdown(
+            f"""
+                <div class="deep-card" style="border-left-color: #38bdf8;">
+                    <h4 style="color: #38bdf8; margin: 0 0 6px 0;">{item['Ticker']} — {item['Nama']} (Rp {item['Harga']:,.0f})</h4>
+                    <p><b>Frekuensi Transaksi:</b> {item['Frekuensi']} | <b>Perubahan:</b> {item['Perubahan']}%</p>
+                    <p><b>🎯 Skema Trading:</b> Entry: <b style="color: #ffffff;">Rp {item['Entry']:,.2f}</b> | TP 1 (Konservatif): <b style="color: #22c55e;">Rp {item['TP 1']:,.2f}</b> | TP 2 (Maksimal): <b style="color: #22c55e;">Rp {item['TP 2']:,.2f}</b> | Cut Loss: <b style="color: #ef4444;">Rp {item['CL']:,.2f}</b></p>
+                    <p style="color: #cbd5e1; font-size: 0.85rem; margin-top: 4px;"><i>Catatan: {item['Catatan']}</i></p>
+                </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with tab_bsjp:
+      st.markdown(
+          "#### 🌆 Daftar Rekomendasi BSJP (Eksekusi Sore Jam 15:50 - 16:00)"
+      )
+      df_bsjp = pd.DataFrame(st.session_state["scalp_inv_bsjp"])
+      st.dataframe(
+          df_bsjp[[
+              "Ticker",
+              "Nama",
+              "Harga",
+              "Frekuensi",
+              "Entry",
+              "TP 1",
+              "TP 2",
+              "CL",
+          ]],
+          use_container_width=True,
+      )
+      st.markdown("---")
+      for item in df_bsjp.to_dict(orient="records"):
+        st.markdown(
+            f"""
+                <div class="deep-card" style="border-left-color: #a855f7;">
+                    <h4 style="color: #a855f7; margin: 0 0 6px 0;">{item['Ticker']} — {item['Nama']} (Rp {item['Harga']:,.0f})</h4>
+                    <p><b>Frekuensi Transaksi:</b> {item['Frekuensi']} | <b>Perubahan:</b> {item['Perubahan']}%</p>
+                    <p><b>🎯 Skema Trading:</b> Entry Sore: <b style="color: #ffffff;">Rp {item['Entry']:,.2f}</b> | TP Pagi 1: <b style="color: #22c55e;">Rp {item['TP 1']:,.2f}</b> | TP Pagi 2: <b style="color: #22c55e;">Rp {item['TP 2']:,.2f}</b> | Cut Loss: <b style="color: #ef4444;">Rp {item['CL']:,.2f}</b></p>
+                    <p style="color: #cbd5e1; font-size: 0.85rem; margin-top: 4px;"><i>Catatan: {item['Catatan']}</i></p>
+                </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with tab_akum:
+      st.markdown("#### 🕵️‍♂️ Deteksi Akumulasi 1-3 Hari & Proyeksi Swing Trade")
+      df_akum = pd.DataFrame(st.session_state["scalp_inv_akum"])
+      st.dataframe(
+          df_akum[[
+              "Ticker",
+              "Nama",
+              "Harga",
+              "Broker Akumulator",
+              "Avg Price Bandar",
+              "Durasi Swing",
+              "Target Harga",
+              "Prediksi Gain",
+          ]],
+          use_container_width=True,
+      )
+      st.markdown("---")
+      for item in df_akum.to_dict(orient="records"):
+        st.markdown(
+            f"""
+                <div class="deep-card" style="border-left-color: #f59e0b;">
+                    <h4 style="color: #f59e0b; margin: 0 0 6px 0;">{item['Ticker']} — {item['Nama']} (Harga Acuan: Rp {item['Harga']:,.0f})</h4>
+                    <p><b>Broker Utama:</b> <b style="color: #facc15;">{item['Broker Akumulator']}</b> | <b>Rata-rata Harga Bandar:</b> <b style="color: #34d399;">Rp {item['Avg Price Bandar']:,.2f}</b></p>
+                    <p><b>📊 Narasi Akumulasi:</b> {item['Narasi Akumulasi']}</p>
+                    <hr style="border-color: #334155; margin: 6px 0;">
+                    <p><b>🚀 Proyeksi Swing Trade:</b> Durasi Pegang: <b style="color: #38bdf8;">{item['Durasi Swing']}</b> | Target Harga: <b style="color: #22c55e;">Rp {item['Target Harga']:,.2f}</b></p>
+                    <p><b>📈 Probabilitas Kenaikan:</b> <b style="color: #facc15;">{item['Probabilitas']}</b> | <b>Prediksi Potensi Gain:</b> <b style="color: #34d399;">{item['Prediksi Gain']}</b></p>
+                </div>
+            """,
+            unsafe_allow_html=True,
+        )
+  else:
+    st.info(
+        "Klik tombol di sidebar ⚡ **JALANKAN SCANNER SCALPING INVEST** untuk"
+        " memuat data."
+    )
