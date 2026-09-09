@@ -1,1391 +1,1178 @@
 from concurrent.futures import ThreadPoolExecutor
-import datetime
-import random
+import urllib.parse
+import xml.etree.ElementTree as ET
+from datetime import datetime, timedelta
 import time
+
 import numpy as np
 import pandas as pd
+import requests
 import streamlit as st
 import yfinance as yf
 
-# Konfigurasi Halaman Web
+# =========================================================================
+# KONFIGURASI HALAMAN — AI AGENT THEME
+# =========================================================================
+
 st.set_page_config(
-    page_title="Dashboard Screener Saham Otomatis BEI",
-    page_icon="📈",
+    page_title="🤖 AI Screener Saham BEI",
+    page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# --- CSS STYLING: PROFESIONAL & MODERN ---
-st.markdown(
-    """
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+# =========================================================================
+# CSS AI AGENT — ANIMASI & GLASSMORPHISM
+# =========================================================================
 
-    .main { 
-        background: #0f172a;
-        color: #f8fafc; 
-        font-family: 'Plus Jakarta Sans', sans-serif;
-    }
-    .stSidebar { 
-        background-color: #1e293b !important;
-        border-right: 1px solid #334155;
-    }
-    h1, h2, h3 {
-        font-family: 'Plus Jakarta Sans', sans-serif !important;
-        font-weight: 800;
-    }
-    
-    .deep-card {
-        padding: 16px 20px;
-        border-radius: 10px;
-        margin-bottom: 16px;
-        border: 1px solid #334155;
-        background: #1e293b;
-        border-left: 6px solid #3b82f6;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-    .deep-card h3 {
-        font-size: 1.2rem !important;
-        margin-bottom: 8px !important;
-    }
-    .deep-card p {
-        font-size: 0.9rem !important;
-        margin-bottom: 6px !important;
-        color: #cbd5e1;
-    }
-    
-    .macro-box {
-        padding: 14px 18px;
-        border-radius: 8px;
-        background: #1e293b;
-        border: 1px solid #3b82f6;
-        border-left: 5px solid #3b82f6;
-        margin-bottom: 18px;
-    }
-    
-    .warning-note { 
-        background: #451a03; 
-        border-left: 5px solid #f59e0b; 
-        padding: 12px; 
-        border-radius: 6px; 
-        margin-bottom: 12px; 
-    }
-    
-    .main-title { 
-        font-weight: 900; 
-        color: #38bdf8;
-        font-size: 1.8rem;
-        margin-bottom: 5px;
-        border-bottom: 2px solid #334155;
-        padding-bottom: 8px;
-    }
-    .stButton>button {
-        background: #3b82f6 !important;
-        color: #ffffff !important;
-        font-family: 'Plus Jakarta Sans', sans-serif !important;
-        font-weight: 600 !important;
-        border-radius: 6px !important;
-        padding: 0.4rem 1rem !important;
-        border: none !important;
-    }
-    </style>
-""",
-    unsafe_allow_html=True,
-)
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Orbitron:wght@400;700&display=swap');
 
-
-# --- FUNGSI PENDUKUNG BERITA & OTOMATISASI TICKER IDX ---
-def get_latest_news_for_ticker(ticker):
-  catalysts = [
-      (
-          "Lonjakan volume transaksi terpantau masif, mengindikasikan akumulasi"
-          " institusi/bandar."
-      ),
-      (
-          "Sentimen sektor pendukung dan aksi spekulasi tinggi memberikan"
-          " dorongan harga."
-      ),
-      "Antrean beli tebal terbentuk di market reguler menjelang sesi aktif.",
-      (
-          "Perubahan struktur order book menunjukkan dominasi buyer yang"
-          " menjaga area support."
-      ),
-  ]
-  try:
-    clean_t = ticker.replace(".JK", "")
-    tk = yf.Ticker(clean_t + ".JK")
-    news = tk.news
-    if news and len(news) > 0:
-      return news[0].get("title", "Aksi akumulasi terdeteksi pada order book.")
-  except Exception:
-    pass
-  return random.choice(catalysts)
-
-
-@st.cache_data(ttl=86400)
-def get_all_idx_tickers():
-  """Mengambil daftar seluruh emiten BEI secara otomatis dari sumber publik"""
-  try:
-    url = "https://raw.githubusercontent.com/wildangunawan/Dataset-Saham-IDX/master/List%20Emiten/all_emiten.csv"
-    df = pd.read_csv(url)
-    if "Ticker" in df.columns:
-      raw_list = df["Ticker"].dropna().tolist()
-    else:
-      raw_list = df.iloc[:, 0].dropna().tolist()
-
-    formatted = [
-        t.strip().upper() + ".JK"
-        if not str(t).endswith(".JK")
-        else t.strip().upper()
-        for t in raw_list
-    ]
-    return list(set(formatted))
-  except Exception:
-    fallback_pool = [
-        "BUMI.JK",
-        "BRMS.JK",
-        "DEWA.JK",
-        "ENRG.JK",
-        "ARTO.JK",
-        "HILL.JK",
-        "ADRO.JK",
-        "BBRI.JK",
-        "ANTM.JK",
-        "PTBA.JK",
-        "MEDC.JK",
-        "PANI.JK",
-        "ASRI.JK",
-        "BSDE.JK",
-        "ELSA.JK",
-        "BIPI.JK",
-        "BRPT.JK",
-        "COAL.JK",
-        "SMMT.JK",
-        "APEX.JK",
-        "BBCA.JK",
-        "BMRI.JK",
-        "TLKM.JK",
-        "MDKA.JK",
-        "INKP.JK",
-        "ADMR.JK",
-        "CPIN.JK",
-        "PWON.JK",
-        "HRUM.JK",
-        "KEEN.JK",
-        "ACES.JK",
-        "ASII.JK",
-    ]
-    return fallback_pool
-
-
-def classify_market_cap(price):
-  if price > 5000:
-    return "Big Cap"
-  elif price > 500:
-    return "Mid Cap"
-  elif price > 150:
-    return "Small Cap"
-  else:
-    return "Gorengan"
-
-
-# --- NAVIGASI UTAMA ---
-st.markdown(
-    '<h1 class="main-title">📈 DASHBOARD SCREENER OTOMATIS SAHAM BEI</h1>',
-    unsafe_allow_html=True,
-)
-st.markdown(
-    "<p style='color: #94a3b8; font-size: 0.85rem;'>Semua modul di bawah ini"
-    " memindai seluruh emiten secara otomatis dan mengelompokkannya ke dalam"
-    " kategori Big Cap, Mid Cap, Small Cap, dan Gorengan.</p>",
-    unsafe_allow_html=True,
-)
-
-# --- KOTAK MAKROEKONOMI ---
-st.markdown(
-    """
-    <div class="macro-box">
-        <h4 style="color: #60a5fa; margin-top: 0; margin-bottom: 8px;">🌐 RINGKASAN MAKROEKONOMI GLOBAL & DOMESTIK</h4>
-        <p style="margin: 3px 0; color: #cbd5e1;"><b>🇮🇩 Domestik:</b> PDB tumbuh stabil di kisaran 5.1%-5.3%, inflasi terkendali, dan nilai tukar Rupiah terjaga.</p>
-        <p style="margin: 3px 0; color: #cbd5e1;"><b>🌍 Global:</b> Kebijakan suku bunga bank sentral dunia (The Fed) mempengaruhi arah aliran dana investor asing (<i>foreign flow</i>).</p>
-    </div>
-""",
-    unsafe_allow_html=True,
-)
-
-st.sidebar.markdown(
-    "<h3 style='color: #38bdf8; font-size: 1.1rem;'>⚙️ MENU SCREENER</h3>",
-    unsafe_allow_html=True,
-)
-menu_mode = st.sidebar.selectbox(
-    "Pilih Modul Screener:",
-    [
-        "💸 1. Auto-Screener Growth Jangka Panjang (Multi-Bagger)",
-        "🃏 2. Auto-Screener Saham Potensial Tersembunyi (Hidden Gems)",
-        "🔪 3. Auto-Screener Scalping & Saham Volatil Harian",
-        (
-            "🕵️‍♂️ 4. Auto-Screener Swing Trading 1-3 Minggu (Big, Mid, & Small"
-            " Cap)"
-        ),
-        "📉 5. Cek Data & Grafik Emiten Mandiri",
-        "🚀 6. Scalping Invest (Saham Rp 50 - Rp 200)",
-    ],
-)
-
-multibagger_database = {
-    "ADRO.JK": {
-        "display_name": "PT Adaro Energy Indonesia Tbk",
-        "reason": (
-            "Lonjakan volume transaksi tanpa kenaikan harga signifikan,"
-            " mengindikasikan akumulasi institusi."
-        ),
-        "brokers": "BK (JPMorgan Sekuritas) & XC (Ajaib Sekuritas)",
-        "project": "Restrukturisasi strategis dan penguatan arus kas.",
-    },
-    "PTBA.JK": {
-        "display_name": "PT Bukit Asam Tbk",
-        "reason": "Akumulasi konsisten pada area support dengan volatilitas sehat.",
-        "brokers": "ZP (Mirae Asset) & YP (Retail Aktif)",
-        "project": "Pengembangan infrastruktur pendukung operasional.",
-    },
-    "ANTM.JK": {
-        "display_name": "PT Aneka Tambang Tbk",
-        "reason": "Kenaikan harga komoditas didukung efisiensi biaya produksi.",
-        "brokers": "AK (Asing) & CC (Mandiri Sekuritas)",
-        "project": "Pengembangan hilirisasi produk tambang.",
-    },
-    "HRUM.JK": {
-        "display_name": "PT Harum Energy Tbk",
-        "reason": "Valuasi atraktif dengan struktur neraca keuangan yang sehat.",
-        "brokers": "CC (Mandiri) & ZP (Mirae)",
-        "project": "Diversifikasi bisnis ke sektor energi terbarukan.",
-    },
-    "MEDC.JK": {
-        "display_name": "PT Medco Energi Internasional Tbk",
-        "reason": "Penguatan struktur keuangan pasca efisiensi operasional.",
-        "brokers": "RX (Macan Broker) & BB (Institusi)",
-        "project": "Pengembangan blok migas dan energi bersih.",
-    },
-    "MDKA.JK": {
-        "display_name": "PT Merdeka Copper Gold Tbk",
-        "reason": "Peningkatan efisiensi produksi tambang emas dan tembaga.",
-        "brokers": "CS (Credit Suisse) & AK (Asing)",
-        "project": "Penyelesaian proyek smelter dan ekspansi tambang.",
-    },
+.stApp {
+    background: linear-gradient(135deg, #0a0e1a 0%, #1a1a2e 50%, #16213e 100%);
 }
 
-hidden_gem_database = {
-    "ELSA.JK": {
-        "display_name": "PT Elnusa Tbk",
-        "reason": "Akumulasi bertahap oleh investor institusi pada area konsolidasi.",
-        "brokers": "YP (Retail) & LG (Lokal Growth)",
-        "project": "Perluasan jasa penunjang energi terintegrasi.",
-    },
-    "KEEN.JK": {
-        "display_name": "PT Kencana Energi Lestari Tbk",
-        "reason": "Valuasi menarik dengan kepastian arus kas jangka panjang.",
-        "brokers": "AK (Asing) & ZP (Mirae)",
-        "project": "Pembangunan pembangkit listrik tenaga air baru.",
-    },
-    "ACES.JK": {
-        "display_name": "PT Aspirasi Hidup Indonesia Tbk",
-        "reason": "Efisiensi operasional dan optimasi jaringan gerai ritel.",
-        "brokers": "CC (Mandiri) & MG (Market Maker)",
-        "project": "Pembukaan gerai baru di berbagai wilayah potensial.",
-    },
-    "ASII.JK": {
-        "display_name": "PT Astra International Tbk",
-        "reason": "Kinerja terdiversifikasi dari berbagai lini bisnis utama.",
-        "brokers": "ZP (Mirae) & BB (Institusi)",
-        "project": "Pengembangan kendaraan ramah lingkungan dan digitalisasi.",
-    },
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.95); }
+}
+@keyframes glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(56, 189, 248, 0.2); }
+    50% { box-shadow: 0 0 50px rgba(56, 189, 248, 0.6); }
+}
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+@keyframes typing {
+    from { width: 0; }
+    to { width: 100%; }
+}
+@keyframes blink {
+    0%, 100% { border-color: transparent; }
+    50% { border-color: #38bdf8; }
+}
+@keyframes scanline {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+@keyframes rotateGlow {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
-
-# ==========================================
-# MODUL 1: AUTO-SCREENER MULTI-BAGGER
-# ==========================================
-if menu_mode == "💸 1. Auto-Screener Growth Jangka Panjang (Multi-Bagger)":
-  st.markdown("### 💸 Auto-Screener Fundamental Jangka Panjang (Multi-Bagger)")
-  st.markdown(
-      "<p style='color: #94a3b8;'>Sistem memindai otomatis seluruh emiten di"
-      " bursa dan mengelompokkannya berdasarkan kategori pasar (Big Cap, Mid"
-      " Cap, Small Cap, Gorengan).</p>",
-      unsafe_allow_html=True,
-  )
-
-  if st.sidebar.button("🔍 JALANKAN AUTO-SCREENER MULTI-BAGGER", type="primary"):
-    all_pool = get_all_idx_tickers()
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-
-    multibagger_results = []
-    total = len(all_pool)
-
-    def process_multibagger(t):
-      try:
-        stock_mb = yf.Ticker(t)
-        df_mb = stock_mb.history(period="3mo")
-        if df_mb.empty or len(df_mb) < 20:
-          return None
-        close = float(df_mb["Close"].iloc[-1])
-        volume = float(df_mb["Volume"].iloc[-1])
-        if volume <= 0 or close < 10.0:
-          return None
-
-        ma50 = float(df_mb["Close"].rolling(window=50).mean().iloc[-1])
-        if close < ma50 * 0.95:
-          return None
-
-        clean_code = t.replace(".JK", "")
-        profile = multibagger_database.get(
-            t,
-            {
-                "display_name": f"PT {clean_code} Tbk",
-                "reason": (
-                    "Peningkatan efisiensi operasional dan pertumbuhan laba"
-                    " bersih stabil."
-                ),
-                "brokers": "AK (Asing) & ZP (Mirae)",
-                "project": "Ekspansi kapasitas dan diversifikasi bisnis.",
-            },
-        )
-
-        pe = round(random.uniform(7.5, 15.0), 2)
-        pbv = round(random.uniform(0.6, 1.8), 2)
-        val_status = (
-            "🟢 VALUASI MENARIK (PBV < 1x)"
-            if pbv < 1.0
-            else "🔵 VALUASI WAKTU NORMAL"
-        )
-        cap_category = classify_market_cap(close)
-
-        if pe < 10:
-          per_analysis = (
-              f"PER {pe}x (Sangat Undervalued / Murah dibanding rata-rata"
-              " industri, potensi ekspansi valuasi tinggi)."
-          )
-        elif pe <= 15:
-          per_analysis = (
-              f"PER {pe}x (Valuasi wajar dan menarik untuk investasi jangka"
-              " panjang didukung pertumbuhan laba)."
-          )
-        else:
-          per_analysis = (
-              f"PER {pe}x (Premium, dihargai tinggi karena ekspektasi growth ke"
-              " depan yang agresif)."
-          )
-
-        return {
-            "Ticker": t,
-            "Nama": profile["display_name"],
-            "Kategori": cap_category,
-            "Harga": round(close, 2),
-            "PER": pe,
-            "Analisis PER": per_analysis,
-            "Valuasi PBV": pbv,
-            "StatusValuasi": val_status,
-            "Timeframe": "12 - 24 Bulan",
-            "Skor": f"⭐ {random.randint(85, 99)} / 100",
-            "Entry": round(close * 0.99, 2),
-            "Target Rasional": round(close * 2.5, 2),
-            "Cut Loss": round(close * 0.85, 2),
-            "Reason": profile["reason"],
-            "Project": profile["project"],
-            "News": get_latest_news_for_ticker(t),
-            "Brokers": profile["brokers"],
-            "Macro": (
-                "Didukung tren pertumbuhan ekonomi makro dan efisiensi sektor"
-                " terkait."
-            ),
-        }
-      except:
-        return None
-
-    completed = 0
-    with ThreadPoolExecutor(max_workers=10) as executor:
-      futures = {executor.submit(process_multibagger, t): t for t in all_pool}
-      for future in futures:
-        res = future.result()
-        completed += 1
-        if completed % 25 == 0 or completed == total:
-          progress_bar.progress(int((completed / total) * 100))
-          status_text.text(
-              f"Memindai emiten multi-bagger... ({completed}/{total})"
-          )
-        if res is not None:
-          multibagger_results.append(res)
-
-    progress_bar.empty()
-    status_text.empty()
-    st.session_state["multibagger_data"] = multibagger_results
-    st.success(
-        f"Screener selesai! Ditemukan {len(multibagger_results)} emiten yang lolos"
-        " kriteria Multi-Bagger."
-    )
-
-  if (
-      "multibagger_data" in st.session_state
-      and st.session_state["multibagger_data"]
-  ):
-    df_display = pd.DataFrame(st.session_state["multibagger_data"])
-    selected_cap_tab = st.selectbox(
-        "Filter Kategori Pasar (Modul 1):",
-        ["Semua Kategori", "Big Cap", "Mid Cap", "Small Cap", "Gorengan"],
-    )
-    if selected_cap_tab != "Semua Kategori":
-      df_filtered = df_display[df_display["Kategori"] == selected_cap_tab]
-    else:
-      df_filtered = df_display
-
-    st.dataframe(
-        df_filtered[[
-            "Ticker",
-            "Nama",
-            "Kategori",
-            "Harga",
-            "PER",
-            "StatusValuasi",
-            "Timeframe",
-            "Skor",
-        ]],
-        use_container_width=True,
-    )
-    st.markdown("---")
-    for mb in df_filtered.to_dict(orient="records"):
-      st.markdown(
-          f"""
-            <div class="deep-card">
-                <h3 style="color: #38bdf8;">Emiten Lolos Screener: <b style="color: #ffffff;">{mb['Ticker']}</b> — {mb['Nama']} ({mb['Kategori']}) | Skor: <b style="color: #facc15;">{mb['Skor']}</b></h3>
-                <p><b>Harga Acuan:</b> Rp {mb['Harga']:,.2f} | <b>PER (P/E Ratio):</b> <b style="color: #34d399;">{mb['PER']}x</b> | <b>P/BV:</b> {mb['Valuasi PBV']} | <b>Timeframe: {mb['Timeframe']}</b></p>
-                <p><b>🔍 Analisis PER:</b> <span style="color: #a7f3d0;">{mb['Analisis PER']}</span></p>
-                <p><b>Status Valuasi:</b> {mb['StatusValuasi']}</p>
-                <p><b>Rencana Trading:</b> Entry: Rp {mb['Entry']:,.2f} | Target Harga: <b style="color: #22c55e;">Rp {mb['Target Rasional']:,.2f}</b> | Batas Risiko (CL): <b style="color: #ef4444;">Rp {mb['Cut Loss']:,.2f}</b></p>
-                <hr style="border-color: #334155; margin: 8px 0;">
-                <p><b>Analisis Fundamental:</b> {mb['Reason']}</p>
-                <p><b>Broker Pengamat:</b> <b style="color: #facc15;">{mb['Brokers']}</b></p>
-                <p><b>Proyek / Inisiatif:</b> <b style="color: #38bdf8;">{mb['Project']}</b></p>
-                <p><b>Tinjauan Makro:</b> <b style="color: #60a5fa;">{mb['Macro']}</b></p>
-                <p><b>Berita Terbaru:</b> <i style="color: #cbd5e1;">{mb['News']}</i></p>
-            </div>
-        """,
-          unsafe_allow_html=True,
-      )
-  else:
-    st.info("Klik tombol di sidebar untuk menjalankan screener Multi-Bagger.")
-
-
-# ==========================================
-# MODUL 2: AUTO-SCREENER HIDDEN GEMS
-# ==========================================
-elif (
-    menu_mode
-    == "🃏 2. Auto-Screener Saham Potensial Tersembunyi (Hidden Gems)"
-):
-  st.markdown("### 🃏 Auto-Screener Saham Lapis Kedua (Hidden Gems)")
-  st.markdown(
-      "<p style='color: #94a3b8;'>Sistem memindai otomatis emiten lapis"
-      " menengah/kecil dan dikelompokkan ke dalam kategori pasar.</p>",
-      unsafe_allow_html=True,
-  )
-
-  if st.sidebar.button("🔍 JALANKAN AUTO-SCREENER HIDDEN GEMS", type="primary"):
-    all_pool = get_all_idx_tickers()
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-
-    hidden_results = []
-    total = len(all_pool)
-
-    def process_hidden_gem(t):
-      try:
-        stock_hg = yf.Ticker(t)
-        df_hg = stock_hg.history(period="1mo")
-        if df_hg.empty or len(df_hg) < 15:
-          return None
-        close = float(df_hg["Close"].iloc[-1])
-        volume = float(df_hg["Volume"].iloc[-1])
-        avg_vol = float(df_hg["Volume"].mean())
-
-        if volume <= avg_vol * 1.1 or close < 10.0:
-          return None
-
-        clean_code = t.replace(".JK", "")
-        profile = hidden_gem_database.get(
-            t,
-            {
-                "display_name": f"PT {clean_code} Tbk",
-                "reason": (
-                    "Akumulasi bertahap oleh investor institusi pada area"
-                    " konsolidasi."
-                ),
-                "brokers": "YP (Retail) & LG (Lokal Growth)",
-                "project": "Ekspansi usaha dan optimalisasi lini produk.",
-            },
-        )
-
-        pe = round(random.uniform(6.0, 13.5), 2)
-        pbv = round(random.uniform(0.7, 1.4), 2)
-        cap_category = classify_market_cap(close)
-
-        if pe < 8:
-          per_analysis = (
-              f"PER {pe}x (Sangat atraktif untuk kategori hidden gem,"
-              " mencerminkan valuasi diskon dibanding potensi pertumbuhan"
-              " labanya)."
-          )
-        else:
-          per_analysis = (
-              f"PER {pe}x (Relatif sehat untuk emiten lapis dua, memberikan"
-              " ruang apresiasi harga saat kinerja lapkin rilis)."
-          )
-
-        return {
-            "Ticker": t,
-            "Nama": profile["display_name"],
-            "Kategori": cap_category,
-            "Harga": round(close, 2),
-            "PER": pe,
-            "Analisis PER": per_analysis,
-            "Valuasi PBV": pbv,
-            "Timeframe": "6 - 12 Bulan",
-            "Skor": f"⭐ {random.randint(88, 98)} / 100",
-            "Entry": round(close, 2),
-            "Target Rasional": round(close * 2.0, 2),
-            "Cut Loss": round(close * 0.90, 2),
-            "Reason": profile["reason"],
-            "Project": profile["project"],
-            "News": get_latest_news_for_ticker(t),
-            "Brokers": profile["brokers"],
-            "Macro": (
-                "Potensi pertumbuhan sektor sekunder seiring ekspansi ekonomi"
-                " domestik."
-            ),
-        }
-      except:
-        return None
-
-    completed = 0
-    with ThreadPoolExecutor(max_workers=10) as executor:
-      futures = {executor.submit(process_hidden_gem, t): t for t in all_pool}
-      for future in futures:
-        res = future.result()
-        completed += 1
-        if completed % 25 == 0 or completed == total:
-          progress_bar.progress(int((completed / total) * 100))
-          status_text.text(
-              f"Memindai emiten hidden gems... ({completed}/{total})"
-          )
-        if res is not None:
-          hidden_results.append(res)
-
-    progress_bar.empty()
-    status_text.empty()
-    st.session_state["hidden_gem_data"] = hidden_results
-    st.success(
-        f"Screener selesai! Ditemukan {len(hidden_results)} emiten kategori"
-        " Hidden Gems."
-    )
-
-  if (
-      "hidden_gem_data" in st.session_state
-      and st.session_state["hidden_gem_data"]
-  ):
-    df_hidden = pd.DataFrame(st.session_state["hidden_gem_data"])
-    selected_cap_tab2 = st.selectbox(
-        "Filter Kategori Pasar (Modul 2):",
-        ["Semua Kategori", "Big Cap", "Mid Cap", "Small Cap", "Gorengan"],
-    )
-    if selected_cap_tab2 != "Semua Kategori":
-      df_filtered2 = df_hidden[df_hidden["Kategori"] == selected_cap_tab2]
-    else:
-      df_filtered2 = df_hidden
-
-    st.dataframe(
-        df_filtered2[[
-            "Ticker",
-            "Nama",
-            "Kategori",
-            "Harga",
-            "PER",
-            "Timeframe",
-            "Skor",
-        ]],
-        use_container_width=True,
-    )
-    st.markdown("---")
-    for hg in df_filtered2.to_dict(orient="records"):
-      st.markdown(
-          f"""
-            <div class="deep-card">
-                <h3 style="color: #38bdf8;">Emiten Lolos Screener: <b style="color: #ffffff;">{hg['Ticker']}</b> — {hg['Nama']} ({hg['Kategori']}) | Skor: <b style="color: #facc15;">{hg['Skor']}</b></h3>
-                <p><b>Harga Acuan:</b> Rp {hg['Harga']:,.2f} | <b>PER:</b> <b style="color: #34d399;">{hg['PER']}x</b> | <b>P/BV:</b> {hg['Valuasi PBV']} | <b>Timeframe: {hg['Timeframe']}</b></p>
-                <p><b>🔍 Analisis PER:</b> <span style="color: #a7f3d0;">{hg['Analisis PER']}</span></p>
-                <p><b>Rencana Trading:</b> Entry: Rp {hg['Entry']:,.2f} | Target Harga: <b style="color: #22c55e;">Rp {hg['Target Rasional']:,.2f}</b> | Batas Risiko (CL): <b style="color: #ef4444;">Rp {hg['Cut Loss']:,.2f}</b></p>
-                <hr style="border-color: #334155; margin: 8px 0;">
-                <p><b>Analisis:</b> {hg['Reason']}</p>
-                <p><b>Aktivitas Broker:</b> <b style="color: #facc15;">{hg['Brokers']}</b></p>
-                <p><b>Proyek:</b> <b style="color: #38bdf8;">{hg['Project']}</b></p>
-                <p><b>Tinjauan Makro:</b> <b style="color: #60a5fa;">{hg['Macro']}</b></p>
-                <p><b>Berita:</b> <i style="color: #cbd5e1;">{hg['News']}</i></p>
-            </div>
-        """,
-          unsafe_allow_html=True,
-      )
-  else:
-    st.info("Klik tombol di sidebar untuk menjalankan screener Hidden Gems.")
-
-
-# ==========================================
-# MODUL 3: AUTO-SCREENER SCALPING & VSA
-# ==========================================
-elif menu_mode == "🔪 3. Auto-Screener Scalping & Saham Volatil Harian":
-  st.markdown("### 🔪 Auto-Screener Scalping & Saham Volatil Harian (VSA)")
-  st.markdown(
-      "<p style='color: #94a3b8;'>Memindai otomatis seluruh emiten di bursa,"
-      " menyaring saham volatil dan dikelompokkan ke dalam kategori pasar.</p>",
-      unsafe_allow_html=True,
-  )
-
-  if st.sidebar.button("⚡ JALANKAN AUTO-SCREENER SCALPING & VSA", type="primary"):
-    all_tickers_pool = get_all_idx_tickers()
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-
-    scalp_results = []
-    total_tickers = len(all_tickers_pool)
-
-    def process_single_ticker(t):
-      try:
-        st_sc = yf.Ticker(t)
-        df_sc = st_sc.history(period="30d")
-        if df_sc.empty or len(df_sc) < 20:
-          return None
-
-        close_s = float(df_sc["Close"].iloc[-1])
-        open_s = float(df_sc["Open"].iloc[-1])
-        high_s = float(df_sc["High"].iloc[-1])
-        low_s = float(df_sc["Low"].iloc[-1])
-        prev_close = float(df_sc["Close"].iloc[-2])
-        price_change = ((close_s - prev_close) / prev_close) * 100
-
-        volume_s = float(df_sc["Volume"].iloc[-1])
-        avg_vol = float(df_sc["Volume"].mean())
-        vol_ratio = (volume_s / avg_vol) if avg_vol > 0 else 1.0
-
-        if volume_s <= 0 or close_s < 10.0:
-          return None
-
-        ma5 = df_sc["Close"].rolling(window=5).mean().iloc[-1]
-        ma20 = df_sc["Close"].rolling(window=20).mean().iloc[-1]
-        is_ma_golden = ma5 > ma20
-
-        gap_up_pct = ((open_s - prev_close) / prev_close) * 100
-        is_gap_up = gap_up_pct > 0.4
-
-        close_to_high_pct = (
-            ((high_s - close_s) / high_s) * 100 if high_s > 0 else 100
-        )
-        is_marked_close = (
-            close_to_high_pct < 2.5
-            and price_change > -1.0
-            and vol_ratio > 1.0
-        )
-        is_vol_spike = vol_ratio > 1.5
-
-        resistance_20d = float(df_sc["High"].tail(20).max())
-        distance_to_breakout = ((resistance_20d - close_s) / resistance_20d) * 100
-        is_high_breakout_potential = (
-            distance_to_breakout <= 2.0 or price_change >= 3.0
-        )
-
-        frekuensi_status = (
-            "🔥 SETANAR (Sangat Padat / Freq Tinggi)"
-            if vol_ratio > 2.0 or price_change > 4.0
-            else ("⚡ TINGGI (Ramai Scalper)" if vol_ratio > 1.2 else "⚖️ SEDANG")
-        )
-        is_high_frequency = (
-            "SETANAR" in frekuensi_status or "TINGGI" in frekuensi_status
-        )
-
-        candle_body = abs(close_s - open_s)
-        candle_range = (high_s - low_s) if (high_s - low_s) > 0 else 0.0001
-        body_ratio = candle_body / candle_range
-        is_vsa_absorption = body_ratio < 0.35 and vol_ratio > 1.3
-
-        lower_shadow = min(open_s, close_s) - low_s
-        shadow_ratio = lower_shadow / candle_range if candle_range > 0 else 0
-        is_pinbar_rejection = (
-            shadow_ratio > 0.4 and low_s <= df_sc["Low"].tail(10).min() * 1.01
-        )
-
-        rolling_std = df_sc["Close"].rolling(window=20).std().iloc[-1]
-        bb_upper = ma20 + (2 * rolling_std)
-        bb_lower = ma20 - (2 * rolling_std)
-        is_bb_expansion = vol_ratio > 1.2 and close_s > ma20
-
-        ema12 = df_sc["Close"].ewm(span=12, adjust=False).mean()
-        ema26 = df_sc["Close"].ewm(span=26, adjust=False).mean()
-        macd_line = ema12 - ema26
-        signal_line = macd_line.ewm(span=9, adjust=False).mean()
-        is_macd_bullish = (
-            macd_line.iloc[-1] > signal_line.iloc[-1] or macd_line.iloc[-1] > 0
-        )
-
-        score = 30
-        if is_marked_close:
-          score += 12
-        if is_gap_up:
-          score += 8
-        if is_vol_spike:
-          score += 12
-        if is_high_breakout_potential:
-          score += 12
-        if is_high_frequency:
-          score += 8
-        if is_vsa_absorption:
-          score += 15
-        if is_pinbar_rejection:
-          score += 12
-        if is_bb_expansion:
-          score += 8
-        if is_ma_golden:
-          score += 5
-        if is_macd_bullish:
-          score += 8
-
-        prob_score = min(max(int(score + (vol_ratio * 2)), 25), 99)
-
-        if prob_score < 55 and price_change < 0.5 and not is_vsa_absorption:
-          return None
-
-        clean_code = t.replace(".JK", "")
-        cap_category = classify_market_cap(close_s)
-        top_broker = (
-            "MG (Market Maker Utama)"
-            if price_change >= 0
-            else "YP (Tekanan Jual Retail)"
-        )
-        avg_broker_price = float(df_sc["Low"].tail(5).mean())
-
-        pe = round(random.uniform(7.0, 18.0), 2)
-        if pe <= 10:
-          per_analysis = (
-              f"PER {pe}x (Valuasi menarik, mendukung momentum lonjakan"
-              " harga)."
-          )
-        else:
-          per_analysis = (
-              f"PER {pe}x (Volatilitas tinggi, fokus utama pada kecepatan"
-              " eksekusi dan volume)."
-          )
-
-        entry_price = round(close_s, 2)
-        tp_price = round(entry_price * 1.07, 2)
-        cl_price = round(entry_price * 0.95, 2)
-
-        if prob_score >= 82:
-          status_siap = (
-              "🚀 HIGH BREAKOUT / AKUMULASI VSA MASIF (Siap Melesat Tajam)"
-          )
-          flow_status = "🔥 INFLOW KUAT / SMART MONEY MENYERAP BARANG"
-        elif prob_score >= 70:
-          status_siap = "🟢 POTENSI REBOUND / BREAKOUT DENGAN KONFIRMASI VSA"
-          flow_status = "📈 INTEREST BUYING STABIL"
-        else:
-          status_siap = "🟡 KONSOLIDASI / MENUNGGU TRIGGER LANJUTAN"
-          flow_status = "⚖️ NETRAL / SEIMBANG"
-
-        jejak_notes = []
-        if is_high_breakout_potential:
-          jejak_notes.append("🚀 Potensi Breakout Tinggi di area resistance.")
-        if is_vsa_absorption:
-          jejak_notes.append(
-              f"💎 [VSA Anomali] Volume melonjak ({vol_ratio:.2f}x) pada candle"
-              " kecil."
-          )
-        if is_pinbar_rejection:
-          jejak_notes.append(
-              "🛡️ [Rejection Support] Terbentuk pin bar / ekor bawah."
-          )
-        if is_bb_expansion:
-          jejak_notes.append("📈 Ekspansi harga keluar dari Bollinger Bands.")
-        if is_high_frequency:
-          jejak_notes.append(
-              f"🔥 Frekuensi Transaksi: {frekuensi_status} (Antrean cepat)."
-          )
-        if is_marked_close:
-          jejak_notes.append("✅ Ada indikasi penjagaan harga (Marking Close).")
-
-        tech_supply_demand = (
-            f"Bedah Indikator VSA & Candle ({t}): " + " ".join(jejak_notes)
-        )
-        risk_note = (
-            f"STRATEGI SCALPING ({t}): Disiplin cut loss ketat di Rp {cl_price}"
-            " apabila harga breakdown."
-        )
-        latest_news = get_latest_news_for_ticker(t)
-        macro_emiten = (
-            f"Analisis Sektoral & Karakter Pasar ({t}): Emiten volatil dengan"
-            " pergerakan dinamis berdasarkan struktur VSA dan volume."
-        )
-
-        return {
-            "Ticker": t,
-            "Nama": f"PT {clean_code} Tbk",
-            "Kategori": cap_category,
-            "Harga": entry_price,
-            "PER": pe,
-            "Analisis PER": per_analysis,
-            "Change (%)": round(price_change, 2),
-            "Vol Ratio": round(vol_ratio, 2),
-            "Frekuensi": frekuensi_status,
-            "Top Accumulator": top_broker,
-            "Est. AVG Bandar": round(avg_broker_price, 2),
-            "Arus Dana (Flow)": flow_status,
-            "Probabilitas Siap Naik": f"{prob_score}%",
-            "Status Kesiapan": status_siap,
-            "Entry": entry_price,
-            "TP": tp_price,
-            "CL": cl_price,
-            "Catatan Kewaspadaan": risk_note,
-            "News": latest_news,
-            "MacroEmiten": macro_emiten,
-            "TechSupplyDemand": tech_supply_demand,
-        }
-      except:
-        return None
-
-    completed_count = 0
-    with ThreadPoolExecutor(max_workers=12) as executor:
-      futures = {
-          executor.submit(process_single_ticker, t): t for t in all_tickers_pool
-      }
-      for future in futures:
-        res = future.result()
-        completed_count += 1
-        if completed_count % 25 == 0 or completed_count == total_tickers:
-          progress_val = int((completed_count / total_tickers) * 100)
-          progress_bar.progress(progress_val)
-          status_text.text(
-              f"Memindai emiten scalping... ({completed_count}/{total_tickers})"
-          )
-        if res is not None:
-          scalp_results.append(res)
-
-    progress_bar.empty()
-    status_text.empty()
-    st.session_state["scalp_pro_data"] = scalp_results
-    st.success(
-        f"Pemindaian otomatis selesai! Ditemukan {len(scalp_results)} emiten"
-        " yang lolos screener scalping & VSA."
-    )
-
-  if (
-      "scalp_pro_data" in st.session_state
-      and st.session_state["scalp_pro_data"]
-  ):
-    df_sc_display = pd.DataFrame(st.session_state["scalp_pro_data"])
-    selected_cap_tab3 = st.selectbox(
-        "Filter Kategori Pasar (Modul 3):",
-        ["Semua Kategori", "Big Cap", "Mid Cap", "Small Cap", "Gorengan"],
-    )
-    if selected_cap_tab3 != "Semua Kategori":
-      df_filtered3 = df_sc_display[
-          df_sc_display["Kategori"] == selected_cap_tab3
-      ]
-    else:
-      df_filtered3 = df_sc_display
-
-    st.dataframe(
-        df_filtered3[[
-            "Ticker",
-            "Nama",
-            "Kategori",
-            "Harga",
-            "PER",
-            "Change (%)",
-            "Vol Ratio",
-            "Probabilitas Siap Naik",
-        ]],
-        use_container_width=True,
-    )
-    st.markdown("---")
-    for sc in df_filtered3.to_dict(orient="records"):
-      st.markdown(
-          f"""
-            <div class="deep-card">
-                <h3 style="color: #38bdf8;">Emiten Lolos Scalping: <b style="color: #ffffff;">{sc['Ticker']}</b> — {sc['Nama']} ({sc['Kategori']}) | Skor Probabilitas: <b style="color: #facc15;">{sc['Probabilitas Siap Naik']}</b></h3>
-                <p><b>Harga Acuan:</b> Rp {sc['Harga']:,.2f} | <b>PER:</b> <b style="color: #34d399;">{sc['PER']}x</b> | <b>Perubahan Harian:</b> {sc['Change (%)']}% | <b>Rasio Volume:</b> {sc['Vol Ratio']}x</p>
-                <p><b>🔍 Analisis PER:</b> <span style="color: #a7f3d0;">{sc['Analisis PER']}</span></p>
-                <p><b>Status Kesiapan:</b> <b style="color: #38bdf8;">{sc['Status Kesiapan']}</b></p>
-                <p><b>Rencana Scalp:</b> Entry: Rp {sc['Entry']:,.2f} | Target (TP): <b style="color: #22c55e;">Rp {sc['TP']:,.2f}</b> | Batas Stop Loss (CL): <b style="color: #ef4444;">Rp {sc['CL']:,.2f}</b></p>
-                <hr style="border-color: #334155; margin: 8px 0;">
-                <p><b>Bedah VSA & Supply/Demand:</b> {sc['TechSupplyDemand']}</p>
-                <p><b>Estimasi AVG Bandar:</b> Rp {sc['Est. AVG Bandar']:,.2f} | <b>Arus Dana:</b> <b style="color: #facc15;">{sc['Arus Dana (Flow)']}</b></p>
-                <p><b>Catatan Risiko:</b> {sc['Catatan Kewaspadaan']}</p>
-                <p><b>Berita Terbaru:</b> <i style="color: #cbd5e1;">{sc['News']}</i></p>
-            </div>
-        """,
-          unsafe_allow_html=True,
-      )
-  else:
-    st.info("Klik tombol di sidebar untuk menjalankan screener Scalping & VSA.")
-
-
-# ==========================================
-# MODUL 4: AUTO-SCREENER SWING TRADING (1-3 MINGGU)
-# ==========================================
-elif (
-    menu_mode
-    == "🕵️‍♂️ 4. Auto-Screener Swing Trading 1-3 Minggu (Big, Mid, & Small Cap)"
-):
-  st.markdown("### 🕵️‍♂️ Auto-Screener Swing Trading 1-3 Minggu")
-  st.markdown(
-      "<p style='color: #94a3b8;'>Sistem memindai emiten secara komprehensif"
-      " untuk swing trading berbasis momentum mingguan.</p>",
-      unsafe_allow_html=True,
-  )
-
-  if st.sidebar.button("🚀 JALANKAN AUTO-SCREENER SWING TRADING", type="primary"):
-    all_pool = get_all_idx_tickers()
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-
-    swing_results = []
-    total = len(all_pool)
-
-    def process_swing(t):
-      try:
-        st_sw = yf.Ticker(t)
-        df_sw = st_sw.history(period="3mo")
-        if df_sw.empty or len(df_sw) < 40:
-          return None
-
-        close = float(df_sw["Close"].iloc[-1])
-        volume = float(df_sw["Volume"].iloc[-1])
-        if volume <= 0 or close < 10.0:
-          return None
-
-        ma20 = float(df_sw["Close"].rolling(window=20).mean().iloc[-1])
-        ma50 = float(df_sw["Close"].rolling(window=50).mean().iloc[-1])
-
-        if close < ma20:
-          return None
-
-        clean_code = t.replace(".JK", "")
-        cap_category = classify_market_cap(close)
-        pe = round(random.uniform(8.0, 16.0), 2)
-        pbv = round(random.uniform(0.8, 2.2), 2)
-
-        entry = round(close, 2)
-        tp = round(entry * 1.12, 2)
-        cl = round(entry * 0.96, 2)
-
-        return {
-            "Ticker": t,
-            "Nama": f"PT {clean_code} Tbk",
-            "Kategori": cap_category,
-            "Harga": entry,
-            "PER": pe,
-            "Valuasi PBV": pbv,
-            "Timeframe": "1 - 3 Minggu",
-            "Skor": f"⭐ {random.randint(82, 96)} / 100",
-            "Entry": entry,
-            "Target Swing": tp,
-            "Cut Loss": cl,
-            "Analisis": (
-                "Tren harga berada di atas MA20 dan MA50, mengonfirmasi"
-                " momentum swing bullish."
-            ),
-            "Brokers": "ZP (Mirae Asset) & CC (Mandiri Sekuritas)",
-            "News": get_latest_news_for_ticker(t),
-        }
-      except:
-        return None
-
-    completed = 0
-    with ThreadPoolExecutor(max_workers=10) as executor:
-      futures = {executor.submit(process_swing, t): t for t in all_pool}
-      for future in futures:
-        res = future.result()
-        completed += 1
-        if completed % 25 == 0 or completed == total:
-          progress_bar.progress(int((completed / total) * 100))
-          status_text.text(f"Memindai emiten swing... ({completed}/{total})")
-        if res is not None:
-          swing_results.append(res)
-
-    progress_bar.empty()
-    status_text.empty()
-    st.session_state["swing_data"] = swing_results
-    st.success(
-        f"Screener selesai! Ditemukan {len(swing_results)} emiten untuk Swing"
-        " Trading."
-    )
-
-  if "swing_data" in st.session_state and st.session_state["swing_data"]:
-    df_swing = pd.DataFrame(st.session_state["swing_data"])
-    selected_cap_tab4 = st.selectbox(
-        "Filter Kategori Pasar (Modul 4):",
-        ["Semua Kategori", "Big Cap", "Mid Cap", "Small Cap", "Gorengan"],
-    )
-    if selected_cap_tab4 != "Semua Kategori":
-      df_filtered4 = df_swing[df_swing["Kategori"] == selected_cap_tab4]
-    else:
-      df_filtered4 = df_swing
-
-    st.dataframe(
-        df_filtered4[[
-            "Ticker",
-            "Nama",
-            "Kategori",
-            "Harga",
-            "PER",
-            "Timeframe",
-            "Skor",
-        ]],
-        use_container_width=True,
-    )
-    st.markdown("---")
-    for sw in df_filtered4.to_dict(orient="records"):
-      st.markdown(
-          f"""
-            <div class="deep-card">
-                <h3 style="color: #38bdf8;">Emiten Swing Trading: <b style="color: #ffffff;">{sw['Ticker']}</b> — {sw['Nama']} ({sw['Kategori']}) | Skor: <b style="color: #facc15;">{sw['Skor']}</b></h3>
-                <p><b>Harga Acuan:</b> Rp {sw['Harga']:,.2f} | <b>PER:</b> <b style="color: #34d399;">{sw['PER']}x</b> | <b>Timeframe: {sw['Timeframe']}</b></p>
-                <p><b>Rencana Swing:</b> Entry: Rp {sw['Entry']:,.2f} | Target (TP): <b style="color: #22c55e;">Rp {sw['Target Swing']:,.2f}</b> | Batas Cut Loss: <b style="color: #ef4444;">Rp {sw['Cut Loss']:,.2f}</b></p>
-                <hr style="border-color: #334155; margin: 8px 0;">
-                <p><b>Analisis Teknikal:</b> {sw['Analisis']}</p>
-                <p><b>Broker Aktif:</b> <b style="color: #facc15;">{sw['Brokers']}</b></p>
-                <p><b>Berita Terbaru:</b> <i style="color: #cbd5e1;">{sw['News']}</i></p>
-            </div>
-        """,
-          unsafe_allow_html=True,
-      )
-  else:
-    st.info("Klik tombol di sidebar untuk menjalankan screener Swing Trading.")
-
-
-# ==========================================
-# MODUL 5: CEK DATA & GRAFIK EMITEN MANDIRI
-# ==========================================
-elif menu_mode == "📉 5. Cek Data & Grafik Emiten Mandiri":
-  st.markdown("### 📉 Cek Data & Grafik Emiten Mandiri")
-  st.markdown(
-      "<p style='color: #94a3b8;'>Masukkan kode emiten pilihan Anda untuk"
-      " melihat data historis dan pergerakan grafiknya secara langsung.</p>",
-      unsafe_allow_html=True,
-  )
-
-  custom_ticker = st.text_input(
-      "Masukkan Kode Ticker (Contoh: BBRI, BBCA, ADRO):", "BBRI"
-  )
-  if custom_ticker:
-    formatted_ticker = (
-        custom_ticker.strip().upper() + ".JK"
-        if not custom_ticker.endswith(".JK")
-        else custom_ticker.strip().upper()
-    )
-    try:
-      tk_obj = yf.Ticker(formatted_ticker)
-      df_hist = tk_obj.history(period="6mo")
-      if not df_hist.empty:
-        current_price = float(df_hist["Close"].iloc[-1])
-        st.success(
-            f"Berhasil memuat data untuk {formatted_ticker} | Harga Terakhir: Rp"
-            f" {current_price:,.2f}"
-        )
-        st.line_chart(df_hist["Close"])
-      else:
-        st.error(
-            "Data tidak ditemukan atau kode ticker salah. Mohon periksa"
-            " kembali."
-        )
-    except Exception as e:
-      st.error(f"Terjadi kesalahan saat mengambil data: {e}")
-
-
-# ==========================================
-# MODUL 6: SCALPING INVEST (SAHAM GOCAP - 200) - DILONGGARKAN
-# ==========================================
-else:
-  st.markdown(
-      "### 🚀 Scalping Invest: Spesialis Saham Lapisan Bawah (Rp 50 -"
-      " Rp 200)"
-  )
-  st.markdown(
-      "<p style='color: #94a3b8;'>Modul khusus untuk memindai saham non-tidur"
-      " di rentang harga Rp 50 hingga Rp 200 dengan skema <b>BPJS (Beli Pagi"
-      " Jual Sore)</b>, <b>BSJP (Beli Sore Jual Pagi)</b>, serta <b>Akumulasi"
-      " 1-3 Hari</b>.</p>",
-      unsafe_allow_html=True,
-  )
-
-  st.markdown(
-      """
-        <div class="warning-note">
-            <h4 style="color: #f59e0b; margin-top: 0; margin-bottom: 6px;">⚠️ PERINGATAN RISIKO EKSTREM (SAHAM LAPIS BAWAH)</h4>
-            <p style="margin: 0; color: #fde68a;">Saham di rentang harga Rp 50 - Rp 200 memiliki volatilitas tinggi. Pastikan selalu disiplin memasang <i>Cut Loss</i> dan memantau antrean order (bid/offer).</p>
+.ai-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #38bdf8, #818cf8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.8rem;
+    animation: pulse 2s ease-in-out infinite, float 3s ease-in-out infinite;
+    box-shadow: 0 0 40px rgba(56, 189, 248, 0.3);
+    margin: 0 auto 15px auto;
+    position: relative;
+}
+.ai-avatar::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent, #38bdf8, transparent, #818cf8, transparent);
+    animation: rotateGlow 3s linear infinite;
+    z-index: -1;
+}
+
+.ai-status {
+    background: rgba(30, 41, 59, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    border-radius: 12px;
+    padding: 12px 20px;
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    animation: glow 3s ease-in-out infinite;
+    flex-wrap: wrap;
+}
+
+.ai-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #22c55e;
+    animation: pulse 1s ease-in-out infinite;
+    display: inline-block;
+}
+.ai-dot.scanning {
+    background: #f59e0b;
+    animation: pulse 0.5s ease-in-out infinite;
+}
+.ai-dot.error {
+    background: #ef4444;
+    animation: none;
+}
+
+.typing-text {
+    overflow: hidden;
+    white-space: nowrap;
+    border-right: 2px solid #38bdf8;
+    animation: typing 2s steps(40) 1s forwards, blink 0.8s step-end infinite;
+    width: 0;
+    display: inline-block;
+    font-family: 'Orbitron', monospace;
+    color: #38bdf8;
+}
+.typing-text.done {
+    width: 100%;
+    border-right: none;
+    animation: none;
+}
+
+.glass-card {
+    background: rgba(30, 41, 59, 0.5);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(56, 189, 248, 0.12);
+    border-radius: 16px;
+    padding: 20px;
+    margin: 10px 0;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+.glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+    animation: scanline 3s ease-in-out infinite;
+}
+.glass-card:hover {
+    border-color: rgba(56, 189, 248, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 40px rgba(56, 189, 248, 0.15);
+}
+
+.deep-card {
+    background: rgba(30, 41, 59, 0.6);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(56, 189, 248, 0.15);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    border-left: 4px solid #3b82f6;
+    transition: all 0.3s ease;
+}
+.deep-card:hover {
+    border-left-color: #818cf8;
+    transform: translateX(5px);
+    box-shadow: 0 4px 20px rgba(56, 189, 248, 0.1);
+}
+.deep-card h3 {
+    color: #38bdf8;
+    font-family: 'Orbitron', monospace;
+    font-size: 1.1rem;
+}
+.deep-card p {
+    color: #cbd5e1;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+}
+
+.stSidebar {
+    background: rgba(15, 23, 42, 0.9) !important;
+    backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(56, 189, 248, 0.1) !important;
+}
+.stSidebar .stButton button {
+    background: linear-gradient(135deg, #3b82f6, #818cf8) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 10px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease;
+}
+.stSidebar .stButton button:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 20px rgba(56, 189, 248, 0.4);
+}
+
+.metric-strip {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+.metric-item {
+    background: rgba(30, 41, 59, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(56, 189, 248, 0.15);
+    border-radius: 10px;
+    padding: 10px 16px;
+    min-width: 140px;
+    display: inline-block;
+    margin-right: 10px;
+    transition: all 0.3s ease;
+}
+.metric-item:hover {
+    border-color: rgba(56, 189, 248, 0.4);
+    transform: translateY(-2px);
+}
+.metric-item .val {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #38bdf8;
+    font-family: 'Orbitron', monospace;
+}
+.metric-item .lbl {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.disclaimer {
+    background: rgba(12, 26, 46, 0.8);
+    border: 1px dashed rgba(71, 85, 105, 0.5);
+    padding: 10px 14px;
+    border-radius: 8px;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    margin-top: 10px;
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #1e293b;
+}
+::-webkit-scrollbar-thumb {
+    background: #38bdf8;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #818cf8;
+}
+
+@media (max-width: 768px) {
+    .ai-avatar { width: 60px; height: 60px; font-size: 2rem; }
+    .typing-text { font-size: 0.85rem; white-space: normal; }
+    .metric-item { min-width: 100px; padding: 8px 12px; }
+    .metric-item .val { font-size: 0.9rem; }
+}
+</style>
+""", unsafe_allow_html=True)
+
+# =========================================================================
+# AI AGENT STATE
+# =========================================================================
+
+if "ai_status" not in st.session_state:
+    st.session_state.ai_status = "🟢 Online"
+    st.session_state.ai_message = "Siap membantu analisis saham Anda."
+    st.session_state.scan_count = 0
+    st.session_state.last_scan = None
+    st.session_state.typing_done = False
+
+def ai_speak(message, status="🟢 Online"):
+    st.session_state.ai_message = message
+    st.session_state.ai_status = status
+    st.session_state.typing_done = False
+
+# =========================================================================
+# HEADER AI AGENT
+# =========================================================================
+
+col1, col2, col3 = st.columns([1, 2.5, 1])
+with col1:
+    st.markdown('<div class="ai-avatar">🤖</div>', unsafe_allow_html=True)
+
+with col2:
+    st.markdown(f"""
+    <div style="text-align: center;">
+        <h1 style="font-family: 'Orbitron', monospace; background: linear-gradient(135deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2rem; margin-bottom: 5px;">
+            AI SCREENER BEI
+        </h1>
+        <div style="font-size: 0.7rem; color: #64748b; font-family: 'Orbitron', monospace; letter-spacing: 2px; margin-bottom: 8px;">
+            • REAL-TIME MARKET INTELLIGENCE •
         </div>
-    """,
-      unsafe_allow_html=True,
-  )
+        <div class="ai-status">
+            <span class="ai-dot {'scanning' if 'Scanning' in st.session_state.ai_status else ''}"></span>
+            <span style="color:#94a3b8;font-size:0.75rem;font-family:'Orbitron',monospace;">STATUS:</span>
+            <span style="color:#f8fafc;font-weight:600;font-family:'Orbitron',monospace;font-size:0.8rem;">{st.session_state.ai_status}</span>
+            <span style="color:#334155;">|</span>
+            <span style="color:#94a3b8;font-size:0.75rem;font-family:'Orbitron',monospace;">
+                ⏱️ {st.session_state.last_scan or '—'}
+            </span>
+            <span style="color:#334155;">|</span>
+            <span style="color:#94a3b8;font-size:0.75rem;font-family:'Orbitron',monospace;">
+                📊 {st.session_state.scan_count} scanned
+            </span>
+        </div>
+        <div style="margin-top:6px;">
+            <span style="color:#38bdf8;font-family:'Orbitron',monospace;font-size:0.8rem;">
+                <span class="typing-text {'done' if st.session_state.typing_done else ''}">{st.session_state.ai_message}</span>
+            </span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-  if st.sidebar.button("⚡ JALANKAN SCANNER SCALPING INVEST", type="primary"):
-    all_pool = get_all_idx_tickers()
-    progress_bar = st.progress(0)
-    status_text = st.empty()
+with col3:
+    st.markdown("""
+    <div style="text-align:right; padding-top:20px;">
+        <span style="color:#334155;font-size:0.6rem;font-family:'Orbitron',monospace;">
+            v4.0 • AI-POWERED
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
 
-    bpjs_list = []
-    bsjp_list = []
-    akumulasi_list = []
-    total_pool = len(all_pool)
+st.markdown("---")
 
-    def process_scalp_invest_engine(t):
-      try:
-        st_obj = yf.Ticker(t)
-        df_inv = st_obj.history(period="10d")
-        if df_inv.empty or len(df_inv) < 5:
-          return None, None, None
+# =========================================================================
+# FUNGSI UTILITY
+# =========================================================================
 
-        close_p = float(df_inv["Close"].iloc[-1])
-        vol_p = float(df_inv["Volume"].iloc[-1])
-        avg_vol = float(df_inv["Volume"].mean())
+@st.cache_data(ttl=21600, show_spinner=False)
+def get_wb_macro():
+    out = {}
+    fallback = {"gdp": (2024, 5.0), "infl": (2024, 2.8)}
+    for key, ind in [("gdp", "NY.GDP.MKTP.KD.ZG"), ("infl", "FP.CPI.TOTL.ZG")]:
+        try:
+            url = f"https://api.worldbank.org/v2/country/IDN/indicator/{ind}?format=json&per_page=6&date=2019:2026"
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if data and len(data) > 1 and data[1]:
+                    for row in data[1]:
+                        if row.get("value") is not None:
+                            out[key] = (int(row["date"]), float(row["value"]))
+                            break
+            if key not in out:
+                out[key] = fallback.get(key, (2024, 0))
+        except Exception:
+            out[key] = fallback.get(key, (2024, 0))
+    return out
 
-        # FILTER DILONGGARKAN KHUSUS MODUL 6:
-        # Memungkinkan harga menyentuh Rp 50 (gocap) hingga Rp 200 dengan batas volume minimal yang sangat longgar
-        if close_p < 25 or close_p > 200:
-          return None, None, None
-        if vol_p < 10 or avg_vol < 50:
-          return None, None, None
+@st.cache_data(ttl=300, show_spinner=False)
+def get_index_quotes():
+    out = {}
+    try:
+        data = yf.download("^JKSE", period="5d", interval="1d", progress=False, auto_adjust=True)
+        if not data.empty:
+            if isinstance(data.columns, pd.MultiIndex):
+                closes = data["Close"]["^JKSE"].dropna().values
+            else:
+                closes = data["Close"].dropna().values
+            if len(closes) >= 2:
+                last, prev = float(closes[-1]), float(closes[-2])
+                out["^JKSE"] = {"last": last, "chg": (last - prev) / prev * 100}
+            elif len(closes) == 1:
+                out["^JKSE"] = {"last": float(closes[-1]), "chg": 0}
+    except Exception:
+        out["^JKSE"] = {"last": 7200, "chg": 0}
+    try:
+        data = yf.download("IDR=X", period="5d", interval="1d", progress=False, auto_adjust=True)
+        if not data.empty:
+            if isinstance(data.columns, pd.MultiIndex):
+                closes = data["Close"]["IDR=X"].dropna().values
+            else:
+                closes = data["Close"].dropna().values
+            if len(closes) >= 2:
+                last, prev = float(closes[-1]), float(closes[-2])
+                out["IDR=X"] = {"last": last, "chg": (last - prev) / prev * 100}
+            elif len(closes) == 1:
+                out["IDR=X"] = {"last": float(closes[-1]), "chg": 0}
+    except Exception:
+        out["IDR=X"] = {"last": 15500, "chg": 0}
+    return out
 
-        prev_close = (
-            float(df_inv["Close"].iloc[-2]) if len(df_inv) > 1 else close_p
-        )
-        chg_pct = ((close_p - prev_close) / prev_close) * 100
-        clean_c = t.replace(".JK", "")
+@st.cache_data(ttl=86400, show_spinner=False)
+def get_all_idx_tickers():
+    try:
+        url = "https://raw.githubusercontent.com/wildangunawan/Dataset-Saham-IDX/master/List%20Emiten/all_emiten.csv"
+        df = pd.read_csv(url)
+        col = "Ticker" if "Ticker" in df.columns else df.columns[0]
+        raw = df[col].dropna().astype(str).str.strip().str.upper().tolist()
+        return sorted({t if t.endswith(".JK") else t + ".JK" for t in raw})
+    except Exception:
+        return sorted(["BBCA.JK", "BBRI.JK", "BMRI.JK", "TLKM.JK", "ASII.JK", "ADRO.JK",
+                       "PTBA.JK", "ANTM.JK", "MDKA.JK", "HRUM.JK", "CPIN.JK", "INKP.JK",
+                       "PWON.JK", "BSDE.JK", "BRPT.JK", "SMGR.JK", "KLBF.JK", "ICBP.JK",
+                       "INDF.JK", "GOTO.JK"])
 
-        freq_val = f"{random.randint(50, 1500)} Kali Transaksi"
-        tick = 1 if close_p < 200 else 2
+@st.cache_data(ttl=900, show_spinner=False)
+def get_all_ohlcv(tickers_tuple, period="6mo"):
+    return yf.download(list(tickers_tuple), period=period, interval="1d",
+                       group_by="ticker", threads=True, progress=False, auto_adjust=True)
 
-        # 1. KATEGORI BPJS
-        entry_bpjs = round(close_p, 2)
-        tp1_bpjs = round(entry_bpjs + (tick * 2), 2)
-        tp2_bpjs = round(entry_bpjs + (tick * 4), 2)
-        cl_bpjs = max(25.0, round(entry_bpjs - (tick * 2), 2))
+@st.cache_data(ttl=21600, show_spinner=False)
+def get_fundamentals(tickers_tuple):
+    out = {}
+    def fetch(t):
+        try:
+            info = yf.Ticker(t).info
+            out[t] = {
+                "longName": info.get("longName") or info.get("shortName") or t.replace(".JK", ""),
+                "sector": info.get("sector") or "-",
+                "marketCap": info.get("marketCap"),
+                "trailingPE": info.get("trailingPE"),
+                "priceToBook": info.get("priceToBook"),
+                "returnOnEquity": info.get("returnOnEquity"),
+                "debtToEquity": info.get("debtToEquity"),
+                "revenueGrowth": info.get("revenueGrowth"),
+                "earningsGrowth": info.get("earningsGrowth"),
+                "profitMargins": info.get("profitMargins"),
+            }
+        except Exception:
+            out[t] = None
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        list(ex.map(fetch, tickers_tuple))
+    return out
 
-        bpjs_data = {
-            "Ticker": t,
-            "Nama": f"PT {clean_c} Tbk",
-            "Harga": entry_bpjs,
-            "Frekuensi": freq_val,
-            "Perubahan": round(chg_pct, 2),
-            "Entry": entry_bpjs,
-            "TP 1": tp1_bpjs,
-            "TP 2": tp2_bpjs,
-            "CL": cl_bpjs,
-            "Catatan": (
-                "Pergerakan volatil di area gocap, cocok untuk scalping cepat."
-            ),
-        }
+def add_indicators(df):
+    df = df.copy()
+    c = df["Close"]
+    for p in [20, 50, 200]:
+        df[f"MA{p}"] = c.rolling(p).mean()
+    delta = c.diff()
+    gain = delta.clip(lower=0).ewm(alpha=1/14, adjust=False).mean()
+    loss = -delta.clip(upper=0).ewm(alpha=1/14, adjust=False).mean()
+    rs = gain / loss.replace(0, np.nan)
+    df["RSI14"] = 100 - 100 / (1 + rs)
+    tr = pd.concat([df["High"]-df["Low"], (df["High"]-c.shift()).abs(), (df["Low"]-c.shift()).abs()], axis=1).max(axis=1)
+    df["ATR14"] = tr.ewm(alpha=1/14, adjust=False).mean()
+    ema12, ema26 = c.ewm(span=12, adjust=False).mean(), c.ewm(span=26, adjust=False).mean()
+    df["MACD"] = ema12 - ema26
+    df["MACD_SIG"] = df["MACD"].ewm(span=9, adjust=False).mean()
+    df["VOL_AVG20"] = df["Volume"].rolling(20).mean()
+    df["VOL_RATIO"] = df["Volume"] / df["VOL_AVG20"]
+    return df
 
-        # 2. KATEGORI BSJP
-        entry_bsjp = round(close_p, 2)
-        tp1_bsjp = round(entry_bsjp + (tick * 3), 2)
-        tp2_bsjp = round(entry_bsjp + (tick * 6), 2)
-        cl_bsjp = max(25.0, round(entry_bsjp - (tick * 2), 2))
+def classify_market_cap(market_cap):
+    if market_cap is None or (isinstance(market_cap, float) and np.isnan(market_cap)):
+        return "N/A"
+    if market_cap >= 4e13: return "Big Cap"
+    if market_cap >= 1e13: return "Mid Cap"
+    if market_cap >= 2e12: return "Small Cap"
+    return "Micro Cap"
 
-        bsjp_data = {
-            "Ticker": t,
-            "Nama": f"PT {clean_c} Tbk",
-            "Harga": entry_bsjp,
-            "Frekuensi": freq_val,
-            "Perubahan": round(chg_pct, 2),
-            "Entry": entry_bsjp,
-            "TP 1": tp1_bsjp,
-            "TP 2": tp2_bsjp,
-            "CL": cl_bsjp,
-            "Catatan": (
-                "Potensi pantulan akhir sesi pada saham lapis bawah."
-            ),
-        }
+def fmt_rp(val):
+    if val is None or (isinstance(val, float) and np.isnan(val)):
+        return "N/A"
+    if val >= 1e12: return f"Rp {val/1e12:.2f} T"
+    if val >= 1e9: return f"Rp {val/1e9:.1f} M"
+    return f"Rp {val:,.0f}"
 
-        # 3. KATEGORI AKUMULASI 1-3 HARI
-        brokers_pool = [
-            "YP (Retail Aktif)",
-            "CC (Mandiri Sekuritas)",
-            "ZP (Mirae Asset)",
-            "MG (Market Maker)",
-            "BK (JPMorgan)",
-        ]
-        chosen_broker = random.choice(brokers_pool)
-        avg_price_bandar = round(close_p * random.uniform(0.95, 0.99), 2)
-        durasi_swing = random.choice(["3 - 5 Hari", "1 - 2 Minggu"])
-        prob_val = f"{random.randint(75, 92)}%"
-        pred_gain = f"+{random.randint(15, 40)}%"
-        target_price_swing = round(close_p * random.uniform(1.20, 1.40), 2)
+# =========================================================================
+# iter_frames — PERUBAHAN: minimal 10 hari data
+# =========================================================================
 
-        narasi_akumulasi = (
-            f"Terdeteksi aktivitas broker {chosen_broker} pada rentang"
-            f" harga bawah dengan estimasi rata-rata Rp"
-            f" {avg_price_bandar:,.2f}."
-        )
+def iter_frames(data, tickers):
+    if data.empty:
+        return
+    cols = data.columns.get_level_values(0)
+    for t in tickers:
+        if t not in cols:
+            continue
+        try:
+            df = data[t].dropna(subset=["Close"])
+            # Minimal 10 hari data (dari 30)
+            if len(df) >= 10 and df["Volume"].sum() > 0:
+                yield t, add_indicators(df)
+        except Exception:
+            continue
 
-        akumulasi_data = {
-            "Ticker": t,
-            "Nama": f"PT {clean_c} Tbk",
-            "Harga": close_p,
-            "Broker Akumulator": chosen_broker,
-            "Avg Price Bandar": avg_price_bandar,
-            "Narasi Akumulasi": narasi_akumulasi,
-            "Durasi Swing": durasi_swing,
-            "Target Harga": target_price_swing,
-            "Probabilitas": prob_val,
-            "Prediksi Gain": pred_gain,
-        }
+# =========================================================================
+# BERITA & MAKRO
+# =========================================================================
 
-        return bpjs_data, bsjp_data, akumulasi_data
-      except:
-        return None, None, None
+POS_WORDS = [
+    "tumbuh", "pertumbuhan", "naik", "menguat", "melonjak", "surplus",
+    "ekspansi", "stimulus", "pemulihan", "relief", "positif", "optimis",
+    "penurunan inflasi", "inflasi turun", "suku bunga turun",
+    "bank indonesia turunkan", "turunkan suku bunga", "genjot",
+    "penurunan suku bunga", "ekspor naik", "masuk dana asing",
+    "foreign buying", "dana asing masuk", "investasi masuk", "dividen",
+    "laba", "profit", "pendapatan naik", "order", "kontrak",
+]
+NEG_WORDS = [
+    "resesi", "perang", "eskalsasi", "sanksi", "konflik", "tarif",
+    "inflasi melonjak", "inflasi naik", "suku bunga naik",
+    "kenaikan suku bunga", "the fed naikkan", "defisit", "jatuh",
+    "melemah", "kekhawatiran", "risiko", "phk", "pemutusan hubungan kerja",
+    "perlambatan", "bencana", "krisis", "tekanan", "jual asing",
+    "foreign selling", "dana asing keluar", "memanas", "serangan",
+    "turun", "rugi", "penurunan", "default", "gagal bayar",
+]
 
-    completed_c = 0
-    with ThreadPoolExecutor(max_workers=10) as executor:
-      futures = {
-          executor.submit(process_scalp_invest_engine, t): t for t in all_pool
-      }
-      for future in futures:
-        res_bpjs, res_bsjp, res_akum = future.result()
-        completed_c += 1
-        if completed_c % 25 == 0 or completed_c == total_pool:
-          progress_bar.progress(int((completed_c / total_pool) * 100))
-          status_text.text(
-              f"Memindai saham aktif Rp 50 - Rp 200..."
-              f" ({completed_c}/{total_pool})"
-          )
-        if res_bpjs is not None:
-          bpjs_list.append(res_bpjs)
-          bsjp_list.append(res_bsjp)
-          akumulasi_list.append(res_akum)
+NEWS_FEEDS = {
+    "🌍 Geopolitik": "geopolitik OR perang OR konflik OR sanksi OR tarif",
+    "💵 Makro Global": "The Fed OR FOMC OR suku bunga AS OR inflasi global",
+    "🇮🇩 Makro Indonesia": "BI rate OR suku bunga BI OR inflasi Indonesia",
+    "📊 Bursa & IHSG": "IHSG OR bursa saham Indonesia OR foreign flow",
+}
 
-    progress_bar.empty()
-    status_text.empty()
+@st.cache_data(ttl=900, show_spinner=False)
+def fetch_gnews(query, max_items=6):
+    try:
+        q = urllib.parse.quote(query)
+        r = requests.get(f"https://news.google.com/rss/search?q={q}&hl=id&gl=ID&ceid=ID:id", timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+        root = ET.fromstring(r.content)
+        items = []
+        for it in root.iter("item"):
+            src = it.find("source")
+            items.append({"title": it.findtext("title") or "", "link": it.findtext("link") or "", "pub": it.findtext("pubDate") or "", "source": (src.text if src is not None else "")})
+            if len(items) >= max_items: break
+        return items
+    except: return []
 
-    st.session_state["scalp_inv_bpjs"] = bpjs_list
-    st.session_state["scalp_inv_bsjp"] = bsjp_list
-    st.session_state["scalp_inv_akum"] = akumulasi_list
-    st.success(
-        "Pemindaian Scalping Invest Selesai! Saham lapis bawah berhasil disaring."
-        f" Ditemukan {len(bpjs_list)} emiten potensial."
-    )
+def _sentiment_score(items):
+    skor = 0
+    for it in items:
+        t = (it.get("title") or "").lower()
+        skor += sum(1 for w in POS_WORDS if w in t)
+        skor -= sum(1 for w in NEG_WORDS if w in t)
+    return skor
 
-  if (
-      "scalp_inv_bpjs" in st.session_state
-      and st.session_state["scalp_inv_bpjs"]
-  ):
-    tab_bpjs, tab_bsjp, tab_akum = st.tabs([
-        "🌅 1. Sinyal BPJS (Beli Pagi Jual Sore)",
-        "🌆 2. Sinyal BSJP (Beli Sore Jual Pagi)",
-        "🕵️‍♂️ 3. Akumulasi 1-3 Hari & Swing Trade",
-    ])
+def impact_label(s):
+    if s >= 4: return "🟢🟢 Positif kuat"
+    if s >= 2: return "🟢 Positif"
+    if s <= -4: return "🔴🔴 Negatif kuat"
+    if s <= -2: return "🔴 Negatif"
+    return "⚪ Netral"
 
-    with tab_bpjs:
-      st.markdown(
-          "#### 🌅 Daftar Rekomendasi BPJS (Eksekusi Pagi Jam 09:00 - 10:00)"
-      )
-      df_bpjs = pd.DataFrame(st.session_state["scalp_inv_bpjs"])
-      st.dataframe(
-          df_bpjs[[
-              "Ticker",
-              "Nama",
-              "Harga",
-              "Frekuensi",
-              "Entry",
-              "TP 1",
-              "TP 2",
-              "CL",
-          ]],
-          use_container_width=True,
-      )
-      st.markdown("---")
-      for item in df_bpjs.to_dict(orient="records"):
-        st.markdown(
-            f"""
-                <div class="deep-card" style="border-left-color: #38bdf8;">
-                    <h4 style="color: #38bdf8; margin: 0 0 6px 0;">{item['Ticker']} — {item['Nama']} (Rp {item['Harga']:,.0f})</h4>
-                    <p><b>Frekuensi Transaksi:</b> {item['Frekuensi']} | <b>Perubahan:</b> {item['Perubahan']}%</p>
-                    <p><b>🎯 Skema Trading:</b> Entry: <b style="color: #ffffff;">Rp {item['Entry']:,.2f}</b> | TP 1 (Konservatif): <b style="color: #22c55e;">Rp {item['TP 1']:,.2f}</b> | TP 2 (Maksimal): <b style="color: #22c55e;">Rp {item['TP 2']:,.2f}</b> | Cut Loss: <b style="color: #ef4444;">Rp {item['CL']:,.2f}</b></p>
-                    <p style="color: #cbd5e1; font-size: 0.85rem; margin-top: 4px;"><i>Catatan: {item['Catatan']}</i></p>
-                </div>
-            """,
-            unsafe_allow_html=True,
-        )
+def render_news_section():
+    quotes = get_index_quotes()
+    wb_data = get_wb_macro()
+    strip = '<div class="metric-strip">'
+    for key, label in [("^JKSE", "IHSG"), ("IDR=X", "USD/IDR")]:
+        d = quotes.get(key, {})
+        if d:
+            last, chg = d.get("last"), d.get("chg", 0)
+            if isinstance(last, (int, float)):
+                color = "#22c55e" if chg >= 0 else "#ef4444"
+                strip += f'<div class="metric-item"><div class="lbl">{label}</div><div class="val" style="color:{color}">{last:,.2f} ({chg:+.2f}%)</div></div>'
+    if wb_data.get("gdp"):
+        y, v = wb_data["gdp"]
+        strip += f'<div class="metric-item"><div class="lbl">PDB RI ({y})</div><div class="val">{v:.2f}%</div></div>'
+    if wb_data.get("infl"):
+        y, v = wb_data["infl"]
+        strip += f'<div class="metric-item"><div class="lbl">Inflasi RI ({y})</div><div class="val">{v:.2f}%</div></div>'
+    strip += "</div>"
+    st.markdown(strip, unsafe_allow_html=True)
+    with st.expander("🌐 Berita Makro & Analisis IHSG", expanded=False):
+        total = 0
+        for label, query in NEWS_FEEDS.items():
+            items = fetch_gnews(query)
+            s = _sentiment_score(items)
+            weight = 0.7 if "Geopolitik" in label else 1.0
+            total += s * weight
+            st.markdown(f"**{label}** — {impact_label(s)} (skor {s:+d})")
+            if items:
+                for it in items[:3]:
+                    st.markdown(f"- [{it['title']}]({it['link']}) _{it['source']}_")
+            st.markdown("---")
+        bg = "#14532d" if total >= 2 else ("#7f1d1d" if total <= -2 else "#1e293b")
+        st.markdown(f'<div style="background:{bg};padding:10px;border-radius:8px;"><b>DAMPAK IHSG:</b> skor {total:+.1f}</div>', unsafe_allow_html=True)
 
-    with tab_bsjp:
-      st.markdown(
-          "#### 🌆 Daftar Rekomendasi BSJP (Eksekusi Sore Jam 15:50 - 16:00)"
-      )
-      df_bsjp = pd.DataFrame(st.session_state["scalp_inv_bsjp"])
-      st.dataframe(
-          df_bsjp[[
-              "Ticker",
-              "Nama",
-              "Harga",
-              "Frekuensi",
-              "Entry",
-              "TP 1",
-              "TP 2",
-              "CL",
-          ]],
-          use_container_width=True,
-      )
-      st.markdown("---")
-      for item in df_bsjp.to_dict(orient="records"):
-        st.markdown(
-            f"""
-                <div class="deep-card" style="border-left-color: #a855f7;">
-                    <h4 style="color: #a855f7; margin: 0 0 6px 0;">{item['Ticker']} — {item['Nama']} (Rp {item['Harga']:,.0f})</h4>
-                    <p><b>Frekuensi Transaksi:</b> {item['Frekuensi']} | <b>Perubahan:</b> {item['Perubahan']}%</p>
-                    <p><b>🎯 Skema Trading:</b> Entry Sore: <b style="color: #ffffff;">Rp {item['Entry']:,.2f}</b> | TP Pagi 1: <b style="color: #22c55e;">Rp {item['TP 1']:,.2f}</b> | TP Pagi 2: <b style="color: #22c55e;">Rp {item['TP 2']:,.2f}</b> | Cut Loss: <b style="color: #ef4444;">Rp {item['CL']:,.2f}</b></p>
-                    <p style="color: #cbd5e1; font-size: 0.85rem; margin-top: 4px;"><i>Catatan: {item['Catatan']}</i></p>
-                </div>
-            """,
-            unsafe_allow_html=True,
-        )
+# =========================================================================
+# MESIN SCREENING
+# =========================================================================
 
-    with tab_akum:
-      st.markdown("#### 🕵️‍♂️ Deteksi Akumulasi 1-3 Hari & Proyeksi Swing Trade")
-      df_akum = pd.DataFrame(st.session_state["scalp_inv_akum"])
-      st.dataframe(
-          df_akum[[
-              "Ticker",
-              "Nama",
-              "Harga",
-              "Broker Akumulator",
-              "Avg Price Bandar",
-              "Durasi Swing",
-              "Target Harga",
-              "Prediksi Gain",
-          ]],
-          use_container_width=True,
-      )
-      st.markdown("---")
-      for item in df_akum.to_dict(orient="records"):
-        st.markdown(
-            f"""
-                <div class="deep-card" style="border-left-color: #f59e0b;">
-                    <h4 style="color: #f59e0b; margin: 0 0 6px 0;">{item['Ticker']} — {item['Nama']} (Harga Acuan: Rp {item['Harga']:,.0f})</h4>
-                    <p><b>Broker Utama:</b> <b style="color: #facc15;">{item['Broker Akumulator']}</b> | <b>Rata-rata Harga Bandar:</b> <b style="color: #34d399;">Rp {item['Avg Price Bandar']:,.2f}</b></p>
-                    <p><b>📊 Narasi Akumulasi:</b> {item['Narasi Akumulasi']}</p>
-                    <hr style="border-color: #334155; margin: 6px 0;">
-                    <p><b>🚀 Proyeksi Swing Trade:</b> Durasi Pegang: <b style="color: #38bdf8;">{item['Durasi Swing']}</b> | Target Harga: <b style="color: #22c55e;">Rp {item['Target Harga']:,.2f}</b></p>
-                    <p><b>📈 Probabilitas Kenaikan:</b> <b style="color: #facc15;">{item['Probabilitas']}</b> | <b>Prediksi Potensi Gain:</b> <b style="color: #34d399;">{item['Prediksi Gain']}</b></p>
-                </div>
-            """,
-            unsafe_allow_html=True,
-        )
-  else:
-    st.info(
-        "Klik tombol di sidebar ⚡ **JALANKAN SCANNER SCALPING INVEST** untuk"
-        " memuat data."
-    )
+def run_screen(criteria_fn, description, progress_note):
+    tickers = get_all_idx_tickers()
+    ai_speak(f"🔍 Memindai {len(tickers)} saham...", "🟡 Scanning")
+    bar = st.progress(0, text=f"{progress_note}: mengunduh data {len(tickers)} emiten...")
+    data = get_all_ohlcv(tuple(tickers), period="6mo")
+    bar.progress(40, text=f"{progress_note}: menyaring...")
+    cands = []
+    total = len(tickers)
+    for i, (t, df) in enumerate(iter_frames(data, tickers)):
+        if (i + 1) % 100 == 0:
+            bar.progress(min(40 + int((i + 1) / total * 30), 70), f"{progress_note} ({i+1}/{total})")
+        try:
+            r = criteria_fn(t, df)
+            if r:
+                cands.append(r)
+        except: continue
+    bar.progress(75, text="Mengambil fundamental...")
+    cand_tickers = tuple(sorted({c["Ticker"] for c in cands}))[:60]
+    fmap = get_fundamentals(cand_tickers) if cand_tickers else {}
+    results = []
+    for c in cands:
+        f = fmap.get(c["Ticker"]) or {}
+        merged = {**c, **f}
+        if c.get("_needs_fundamentals") and not f:
+            continue
+        results.append(merged)
+    bar.progress(100, text="Selesai.")
+    time.sleep(0.3)
+    bar.empty()
+    st.session_state.scan_count += len(results)
+    st.session_state.last_scan = datetime.now().strftime("%H:%M:%S")
+    ai_speak(f"✅ {len(results)} saham ditemukan.", "🟢 Online")
+    return pd.DataFrame(results)
+
+# =========================================================================
+# KRITERIA SCREENING
+# =========================================================================
+
+def crit_multibagger(t, df):
+    close = float(df["Close"].iloc[-1])
+    if close < 10:
+        return None
+    ma200 = df["MA200"].iloc[-1]
+    if np.isnan(ma200):
+        return None
+    fund = get_fundamentals((t,)).get(t, {})
+    roe = fund.get("returnOnEquity", 0) or 0
+    rg = fund.get("revenueGrowth", 0) or 0
+    pm = fund.get("profitMargins", 0) or 0
+    pe = fund.get("trailingPE", 0) or 0
+    score = 20
+    if roe >= 0.10: score += 20
+    elif roe >= 0.05: score += 10
+    if rg >= 0.10: score += 20
+    elif rg >= 0.05: score += 10
+    if pm > 0: score += 15
+    if 0 < pe < 15: score += 15
+    elif 0 < pe < 25: score += 8
+    if close > ma200: score += 10
+    if score >= 35:
+        return {"Ticker": t, "Harga": round(close, 2), "MA200": round(float(ma200), 2), "Skor": score, "_needs_fundamentals": False}
+    return None
+
+def crit_hidden_gem(t, df):
+    close = float(df["Close"].iloc[-1])
+    if close < 10:
+        return None
+    ma50 = df["MA50"].iloc[-1]
+    if np.isnan(ma50):
+        return None
+    vol_avg = df["VOL_AVG20"].iloc[-1]
+    if np.isnan(vol_avg) or vol_avg == 0:
+        return None
+    vr = df["Volume"].iloc[-1] / vol_avg
+    rsi = df["RSI14"].iloc[-1]
+    fund = get_fundamentals((t,)).get(t, {})
+    pe = fund.get("trailingPE", 100) or 100
+    rg = fund.get("revenueGrowth", 0) or 0
+    conditions = []
+    if close > ma50:
+        conditions.append("Harga > MA50")
+    if vr > 1.2:
+        conditions.append("Volume Breakout")
+    if pe and 0 < pe < 20:
+        conditions.append(f"PER={pe:.1f}x")
+    if rg > 0.05:
+        conditions.append("Growth Positif")
+    if len(conditions) >= 1:
+        return {"Ticker": t, "Harga": round(close, 2), "VolRatio": round(float(vr), 2), "RSI": round(float(rsi), 1) if not np.isnan(rsi) else 50, "Info": " | ".join(conditions), "_needs_fundamentals": False}
+    return None
+
+def crit_swing(t, df):
+    close = float(df["Close"].iloc[-1])
+    if close < 10:
+        return None
+    ma20 = df["MA20"].iloc[-1]
+    ma50 = df["MA50"].iloc[-1]
+    if np.isnan(ma20) or np.isnan(ma50):
+        return None
+    rsi = df["RSI14"].iloc[-1]
+    conditions = []
+    if close > ma20:
+        conditions.append("Harga > MA20")
+    if ma20 > ma50:
+        conditions.append("MA20 > MA50")
+    if not np.isnan(rsi) and 40 <= rsi <= 70:
+        conditions.append(f"RSI={rsi:.1f}")
+    if len(conditions) >= 1:
+        return {"Ticker": t, "Harga": round(close, 2), "RSI": round(float(rsi), 1) if not np.isnan(rsi) else 50, "Info": " | ".join(conditions), "_needs_fundamentals": False}
+    return None
+
+def score_multibagger(r):
+    roe, rg, pm, de, pe = r.get("returnOnEquity",0) or 0, r.get("revenueGrowth",0) or 0, r.get("profitMargins",0) or 0, r.get("debtToEquity"), r.get("trailingPE")
+    s = min(roe*100,30)/30*30 + min(max(rg,0)*100,30)/30*25 + min(max(pm,0)*100,20)/20*20 + (15 if de is not None and de < 100 else 8 if de is not None and de < 200 else 0) + (10 if pe and 0 < pe < 12 else 5 if pe and pe < 18 else 0)
+    return round(s)
+
+def score_swing(r):
+    s, rsi = 0, r.get("RSI") or 50
+    s += 25 if r.get("Harga", 0) > (r.get("MA20") or 0) else 0
+    s += 20 if 50 <= rsi <= 65 else (12 if 45 <= rsi < 50 else 5)
+    s += 20 if r.get("MACD_BULL") else 5
+    s += 15 if (r.get("VolRatio") or 0) > 1.3 else 8
+    s += 10 if (r.get("trailingPE") and 0 < r.get("trailingPE") < 15) else 4
+    s += 10 if r.get("Harga", 0) > (r.get("MA50") or 0) else 0
+    return round(s)
+
+def show_results(df, score_col, note_cols, card_renderer, filter_col=None):
+    if df.empty:
+        st.info("😕 Tidak ada emiten yang lolos kriteria saat ini.")
+        return
+    df = df.copy()
+    if "marketCap" in df.columns:
+        df["Kategori"] = df["marketCap"].apply(classify_market_cap)
+    else:
+        df["Kategori"] = "N/A"
+    df["Skor"] = df.apply(score_col, axis=1)
+    df = df.sort_values("Skor", ascending=False).reset_index(drop=True)
+    opts = ["Semua Kategori", "Big Cap", "Mid Cap", "Small Cap", "Micro Cap"]
+    f = st.selectbox("Filter Kategori:", opts)
+    if f != "Semua Kategori":
+        df = df[df["Kategori"] == f]
+    nama_col = "longName" if "longName" in df.columns else "Nama" if "Nama" in df.columns else "Ticker"
+    cols = ["Ticker", nama_col, "Kategori", "Harga", "Skor"] + [c for c in note_cols if c in df.columns]
+    cols = list(dict.fromkeys(cols))
+    st.dataframe(df[cols], use_container_width=True)
+    st.markdown("---")
+    for _, row in df.iterrows():
+        card_renderer(row)
+
+# =========================================================================
+# UI UTAMA
+# =========================================================================
+
+render_news_section()
+
+st.sidebar.markdown("""
+<h3 style="color:#38bdf8;font-family:'Orbitron',monospace;font-size:0.9rem;margin-bottom:10px;">
+    ⚙️ AI CONTROL
+</h3>
+""", unsafe_allow_html=True)
+
+menu_mode = st.sidebar.selectbox("Pilih Modul Screener:", [
+    "💸 1. Multi-Bagger",
+    "🃏 2. Hidden Gems",
+    "🔪 3. Scalping & VSA",
+    "🕵️ 4. Swing Trading",
+    "📉 5. Cek Emiten Mandiri",
+    "🚀 6. Scalping Invest",
+    "💰 7. SAHAM UNDER 100 - KHUSUS",
+])
+
+# =========================================================================
+# MODUL 1 — MULTI-BAGGER
+# =========================================================================
+
+if menu_mode.startswith("💸"):
+    st.markdown("### 💸 Multi-Bagger")
+    if st.sidebar.button("🚀 SCAN MULTI-BAGGER", type="primary", use_container_width=True):
+        df = run_screen(crit_multibagger, "Multi-Bagger", "Modul 1")
+        def card(r):
+            pe = r.get("trailingPE")
+            st.markdown(f"""<div class="deep-card">
+                <h3>{r['Ticker']} — {r.get('longName','')} ({r.get('Kategori','')}) | Skor: <b style="color:#facc15;">{r['Skor']}/100</b></h3>
+                <p><b>Harga:</b> Rp {r['Harga']:,.2f} | <b>MA200:</b> Rp {r.get('MA200',0):,.2f} | <b>Kapitalisasi:</b> {fmt_rp(r.get('marketCap'))}</p>
+                <p><b>Fundamental:</b> ROE {(r.get('returnOnEquity') or 0)*100:.1f}% | Rev Growth {(r.get('revenueGrowth') or 0)*100:.1f}% | PER {f"{pe:.1f}x" if pe else "N/A"}</p>
+            </div>""", unsafe_allow_html=True)
+        show_results(df, score_multibagger, ["trailingPE", "RSI"], card)
+
+# =========================================================================
+# MODUL 2 — HIDDEN GEMS
+# =========================================================================
+
+elif menu_mode.startswith("🃏"):
+    st.markdown("### 🃏 Hidden Gems")
+    if st.sidebar.button("🚀 SCAN HIDDEN GEMS", type="primary", use_container_width=True):
+        df = run_screen(crit_hidden_gem, "Hidden Gems", "Modul 2")
+        def card(r):
+            st.markdown(f"""<div class="deep-card">
+                <h3>{r['Ticker']} — {r.get('longName','')} ({r.get('Kategori','')}) | Skor: <b style="color:#facc15;">{r['Skor']}/100</b></h3>
+                <p><b>Harga:</b> Rp {r['Harga']:,.2f} | <b>Vol Ratio:</b> {r.get('VolRatio',0)}x | <b>RSI:</b> {r.get('RSI','N/A')}</p>
+                <p><b>Fundamental:</b> PER {r.get('trailingPE',0):.1f}x | Rev Growth {(r.get('revenueGrowth') or 0)*100:.1f}%</p>
+            </div>""", unsafe_allow_html=True)
+        show_results(df, score_multibagger, ["VolRatio", "RSI", "trailingPE"], card)
+
+# =========================================================================
+# MODUL 3 — SCALPING & VSA (DIPERBAIKI - LEBIH LONGGAR)
+# =========================================================================
+
+elif menu_mode.startswith("🔪"):
+    st.markdown("### 🔪 Auto-Screener Scalping & VSA Harian")
+    st.markdown("""
+    <div style="background:rgba(30,41,59,0.5);padding:12px 16px;border-radius:10px;border-left:3px solid #f59e0b;margin-bottom:12px;font-size:0.85rem;color:#94a3b8;">
+        🔍 Filter: Volume > 500.000 · Vol Ratio > 1.2x · Candle Hijau · Skor >= 30
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if st.sidebar.button("⚡ JALANKAN SCREENER SCALPING & VSA", type="primary"):
+        tickers = get_all_idx_tickers()
+        with st.spinner("🤖 Menganalisis pola scalping..."):
+            data = get_all_ohlcv(tuple(tickers), period="1mo")
+            rows = []
+            for t, df in iter_frames(data, tickers):
+                try:
+                    close = float(df["Close"].iloc[-1])
+                    
+                    # HANYA batas atas (tidak terlalu mahal)
+                    if close > 5000:
+                        continue
+                    
+                    # ===== FILTER LIKUIDITAS (LEBIH LONGGAR) =====
+                    vol = float(df["Volume"].iloc[-1])
+                    if vol < 500000:
+                        continue
+                    
+                    vol_avg = df["VOL_AVG20"].iloc[-1]
+                    if np.isnan(vol_avg) or vol_avg == 0:
+                        continue
+                    vr = vol / vol_avg
+                    
+                    if vr < 1.2:
+                        continue
+                    
+                    # ===== DATA CANDLE =====
+                    open_ = float(df["Open"].iloc[-1])
+                    high = float(df["High"].iloc[-1])
+                    low = float(df["Low"].iloc[-1])
+                    prev = float(df["Close"].iloc[-2])
+                    chg = (close - prev) / prev * 100
+                    
+                    rng = (high - low) or 0.0001
+                    body = abs(close - open_)
+                    lower_shadow = min(open_, close) - low
+                    close_position = (close - low) / rng
+                    
+                    # ===== INDIKATOR =====
+                    rsi = df["RSI14"].iloc[-1]
+                    ma20 = df["MA20"].iloc[-1]
+                    macd = df["MACD"].iloc[-1]
+                    macd_sig = df["MACD_SIG"].iloc[-1]
+                    atr = df["ATR14"].iloc[-1]
+                    
+                    # ===== SKOR & POLA =====
+                    notes = []
+                    score = 10
+                    
+                    # 1. Marking Close
+                    if close_position > 0.6:
+                        notes.append("✅ Marking Close")
+                        score += 15
+                    
+                    # 2. Volume Spike
+                    if vr > 1.8:
+                        notes.append("🔥 Volume Spike")
+                        score += 12
+                    elif vr > 1.3:
+                        notes.append("📈 Volume Meningkat")
+                        score += 6
+                    
+                    # 3. Candle Hijau (WAJIB)
+                    if close > open_:
+                        notes.append("🟢 Candle Hijau")
+                        score += 10
+                    else:
+                        continue
+                    
+                    # 4. Pin Bar
+                    if lower_shadow / rng > 0.3 and close > open_:
+                        notes.append("🛡️ Pin Bar")
+                        score += 10
+                    
+                    # 5. Harga > MA20
+                    if not np.isnan(ma20) and close > ma20:
+                        notes.append("📊 Harga > MA20")
+                        score += 8
+                    
+                    # 6. RSI sehat
+                    if not np.isnan(rsi) and 35 <= rsi <= 72:
+                        notes.append(f"📈 RSI={rsi:.1f}")
+                        score += 6
+                    
+                    # 7. MACD bullish
+                    if not np.isnan(macd) and not np.isnan(macd_sig) and macd > macd_sig:
+                        notes.append("📈 MACD Bullish")
+                        score += 5
+                    
+                    # ===== MINIMAL SKOR 30 =====
+                    if score < 30:
+                        continue
+                    
+                    entry = round(close, 2)
+                    atr_v = float(atr) if not np.isnan(atr) else close * 0.02
+                    
+                    rows.append({
+                        "Ticker": t,
+                        "Harga": entry,
+                        "Change (%)": round(chg, 2),
+                        "VolRatio": round(vr, 2),
+                        "RSI": round(rsi, 1) if not np.isnan(rsi) else 50,
+                        "Skor": min(score, 99),
+                        "TP": round(entry + 1.5 * atr_v, 2),
+                        "CL": round(entry - 1.0 * atr_v, 2),
+                        "Analisis": " | ".join(notes) if notes else "Netral"
+                    })
+                except Exception:
+                    continue
+            
+            df = pd.DataFrame(rows)
+            
+            if not df.empty:
+                st.success(f"✅ {len(df)} saham ditemukan!")
+                st.dataframe(df.sort_values("Skor", ascending=False)[
+                    ["Ticker", "Harga", "Change (%)", "VolRatio", "RSI", "Skor", "TP", "CL"]],
+                    use_container_width=True)
+                
+                for _, r in df.sort_values("Skor", ascending=False).head(20).iterrows():
+                    st.markdown(f"""<div class="deep-card">
+                        <h3>{r['Ticker']} | Skor: <b style="color:#facc15;">{r['Skor']}/99</b></h3>
+                        <p><b>Harga:</b> Rp {r['Harga']:,.2f} ({r['Change (%)']:+.2f}%) | 
+                           <b>Vol Ratio:</b> {r['VolRatio']}x | <b>RSI:</b> {r['RSI']}</p>
+                        <p><b>🎯 TP:</b> Rp {r['TP']:,.2f} | 
+                           <b>🛑 CL:</b> Rp {r['CL']:,.2f}</p>
+                        <p><b>📌 Analisis:</b> {r['Analisis']}</p>
+                    </div>""", unsafe_allow_html=True)
+            else:
+                st.info("😕 Tidak ada emiten yang lolos kriteria scalping hari ini.")
+
+# =========================================================================
+# MODUL 4 — SWING TRADING
+# =========================================================================
+
+elif menu_mode.startswith("🕵️"):
+    st.markdown("### 🕵️ Swing Trading 1-3 Minggu")
+    if st.sidebar.button("🚀 SCAN SWING", type="primary", use_container_width=True):
+        df = run_screen(crit_swing, "Swing", "Modul 4")
+        if not df.empty:
+            data = get_all_ohlcv(tuple(sorted(df["Ticker"].tolist())), period="6mo")
+            extras = {}
+            for t, d in iter_frames(data, list(df["Ticker"])):
+                extras[t] = {"MA20": float(d["MA20"].iloc[-1]), "MA50": float(d["MA50"].iloc[-1]), "MACD_BULL": bool(d["MACD"].iloc[-1] > d["MACD_SIG"].iloc[-1]), "ATR": float(d["ATR14"].iloc[-1]) if not np.isnan(d["ATR14"].iloc[-1]) else None}
+            for k, v in extras.items():
+                for col, val in v.items():
+                    df.loc[df["Ticker"] == k, col] = val
+        def card(r):
+            atr = r.get("ATR") or r["Harga"] * 0.02
+            st.markdown(f"""<div class="deep-card"><h3>{r['Ticker']} — {r.get('longName','')} ({r.get('Kategori','')}) | Skor: <b style="color:#facc15;">{r['Skor']}/100</b></h3><p><b>Harga:</b> Rp {r['Harga']:,.2f} | <b>RSI:</b> {r.get('RSI','N/A')} | <b>ATR:</b> Rp {atr:,.2f}</p><p><b>Entry:</b> Rp {r['Harga']:,.2f} | <b>TP:</b> Rp {r['Harga']+2*atr:,.2f} | <b>CL:</b> Rp {r['Harga']-1.5*atr:,.2f}</p></div>""", unsafe_allow_html=True)
+        show_results(df, score_swing, ["RSI", "trailingPE"], card)
+
+# =========================================================================
+# MODUL 5 — CEK EMITEN MANDIRI
+# =========================================================================
+
+elif menu_mode.startswith("📉"):
+    st.markdown("### 📉 Cek Emiten Mandiri")
+    custom = st.text_input("Masukkan kode (contoh: BBRI, BBCA):", "BBRI")
+    if custom:
+        tk = custom.strip().upper()
+        tk = tk if tk.endswith(".JK") else tk + ".JK"
+        try:
+            obj = yf.Ticker(tk)
+            hist = obj.history(period="6mo", auto_adjust=True)
+            if not hist.empty:
+                hist = add_indicators(hist)
+                st.success(f"{tk} | Rp {hist['Close'].iloc[-1]:,.2f}")
+                st.line_chart(pd.DataFrame({"Close": hist["Close"], "MA20": hist["MA20"], "MA50": hist["MA50"]}))
+                st.bar_chart(hist["Volume"])
+                info = obj.info
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric("Kapitalisasi", fmt_rp(info.get("marketCap")))
+                c2.metric("PER", f"{info.get('trailingPE'):.1f}x" if info.get("trailingPE") else "N/A")
+                c3.metric("PBV", f"{info.get('priceToBook'):.2f}x" if info.get("priceToBook") else "N/A")
+                c4.metric("ROE", f"{(info.get('returnOnEquity') or 0)*100:.1f}%" if info.get("returnOnEquity") else "N/A")
+        except Exception as e:
+            st.error(f"Error: {e}")
+
+# =========================================================================
+# MODUL 6 — SCALPING INVEST
+# =========================================================================
+
+elif menu_mode.startswith("🚀"):
+    st.markdown("### 🚀 Scalping Invest (Rp 25-500)")
+    st.markdown("""
+    <div style="background:#451a03;border-left:5px solid #f59e0b;padding:12px;border-radius:6px;margin-bottom:12px;color:#94a3b8;">
+        ⚠️ Risiko ekstrem. Saham lapis bawah sangat volatil.
+    </div>
+    """, unsafe_allow_html=True)
+    if st.sidebar.button("🚀 SCAN SCALPING INVEST", type="primary", use_container_width=True):
+        tickers = get_all_idx_tickers()
+        with st.spinner("🤖 Memindai saham Rp 25-500..."):
+            data = get_all_ohlcv(tuple(tickers), period="1mo")
+            bpjs, bsjp, akum = [], [], []
+            for t, df in iter_frames(data, tickers):
+                try:
+                    close, open_, high, low = float(df["Close"].iloc[-1]), float(df["Open"].iloc[-1]), float(df["High"].iloc[-1]), float(df["Low"].iloc[-1])
+                    if not (25 <= close <= 500):
+                        continue
+                    prev, chg = float(df["Close"].iloc[-2]), (close - float(df["Close"].iloc[-2])) / float(df["Close"].iloc[-2]) * 100
+                    vol, avg = float(df["Volume"].iloc[-1]), float(df["VOL_AVG20"].iloc[-1]) if not np.isnan(df["VOL_AVG20"].iloc[-1]) else 0
+                    if vol <= 0 or avg <= 0:
+                        continue
+                    vr, rng = vol / avg, (high - low) or 0.0001
+                    atr_v = float(df["ATR14"].iloc[-1]) if not np.isnan(df["ATR14"].iloc[-1]) else close * 0.03
+                    base = {"Ticker": t, "Harga": round(close, 2), "Change (%)": round(chg, 2), "VolRatio": round(vr, 2)}
+                    if chg > 1 and (close - low) / rng >= 0.7 and vr > 1.5:
+                        bpjs.append({**base, "TP": round(close + 1.5 * atr_v, 2), "CL": round(close - 1.0 * atr_v, 2), "Alasan": "Momentum + closing kuat"})
+                    lower = min(open_, close) - low
+                    if lower / rng >= 0.4 and close > open_:
+                        bsjp.append({**base, "TP": round(close + 2.0 * atr_v, 2), "CL": round(low, 2), "Alasan": "Pin bar rejection"})
+                    chg5 = (close / float(df["Close"].iloc[-6]) - 1) * 100 if len(df) > 6 else 0
+                    vol5 = float(df["Volume"].tail(5).mean()) / avg if avg else 0
+                    if abs(chg5) < 5 and vol5 > 1.3:
+                        vwap = df["VWAP10"].iloc[-1]
+                        akum.append({**base, "VWAP10": round(float(vwap), 2) if not np.isnan(vwap) else None, "Akumulasi": "Volume naik, harga konsolidasi", "TP": round(close + 2.5 * atr_v, 2), "CL": round(close - 1.2 * atr_v, 2)})
+                except: continue
+        tab1, tab2, tab3 = st.tabs(["🌅 BPJS", "🌆 BSJP", "🕵️ Akumulasi"])
+        for tab, rows_, label in [(tab1, bpjs, "BPJS"), (tab2, bsjp, "BSJP"), (tab3, akum, "Akumulasi")]:
+            with tab:
+                if rows_:
+                    st.dataframe(pd.DataFrame(rows_), use_container_width=True)
+                else:
+                    st.info(f"Tidak ada sinyal {label} saat ini.")
+
+# =========================================================================
+# MODUL 7 — SAHAM UNDER 100 (SCALPING KHUSUS)
+# =========================================================================
+
+elif menu_mode.startswith("💰"):
+    st.markdown("### 💰 SAHAM UNDER 100 - SCALPING KHUSUS")
+    st.markdown("""
+    <div style="background:rgba(30,41,59,0.5);padding:12px 16px;border-radius:10px;border-left:3px solid #f59e0b;margin-bottom:12px;font-size:0.85rem;color:#94a3b8;">
+        🎯 KHUSUS SAHAM < Rp 100<br>
+        🔍 Candle Hijau · Volume > 100.000 · Vol Ratio > 1.2x<br>
+        ⚠️ Risiko tinggi! Saham sangat volatil.
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if st.sidebar.button("💰 SCAN SAHAM UNDER 100", type="primary", use_container_width=True):
+        tickers = get_all_idx_tickers()
+        with st.spinner("🤖 Memindai saham under 100..."):
+            data = get_all_ohlcv(tuple(tickers), period="1mo")
+            rows = []
+            
+            for t, df in iter_frames(data, tickers):
+                try:
+                    close = float(df["Close"].iloc[-1])
+                    
+                    # ===== KHUSUS UNDER 100 =====
+                    if close >= 100:
+                        continue
+                    
+                    # ===== FILTER LIKUIDITAS =====
+                    vol = float(df["Volume"].iloc[-1])
+                    if vol < 100000:
+                        continue
+                    
+                    vol_avg = df["VOL_AVG20"].iloc[-1]
+                    if np.isnan(vol_avg) or vol_avg == 0:
+                        continue
+                    vr = vol / vol_avg
+                    
+                    if vr < 1.2:
+                        continue
+                    
+                    # ===== DATA CANDLE =====
+                    open_ = float(df["Open"].iloc[-1])
+                    high = float(df["High"].iloc[-1])
+                    low = float(df["Low"].iloc[-1])
+                    prev = float(df["Close"].iloc[-2])
+                    chg = (close - prev) / prev * 100
+                    
+                    rng = (high - low) or 0.0001
+                    close_position = (close - low) / rng
+                    atr = df["ATR14"].iloc[-1]
+                    
+                    # ===== SKOR =====
+                    score = 10
+                    notes = []
+                    
+                    # Candle Hijau (WAJIB)
+                    if close > open_:
+                        score += 20
+                        notes.append("🟢 Candle Hijau")
+                    else:
+                        continue
+                    
+                    if close_position > 0.65:
+                        score += 15
+                        notes.append("✅ Marking Close")
+                    
+                    if vr > 1.8:
+                        score += 12
+                        notes.append("🔥 Volume Spike")
+                    elif vr > 1.3:
+                        score += 6
+                        notes.append("📈 Volume Meningkat")
+                    
+                    rsi = df["RSI14"].iloc[-1]
+                    if not np.isnan(rsi) and 30 <= rsi <= 75:
+                        score += 6
+                        notes.append(f"📈 RSI={rsi:.1f}")
+                    
+                    macd = df["MACD"].iloc[-1]
+                    macd_sig = df["MACD_SIG"].iloc[-1]
+                    if not np.isnan(macd) and not np.isnan(macd_sig) and macd > macd_sig:
+                        score += 5
+                        notes.append("📈 MACD Bullish")
+                    
+                    if score < 30:
+                        continue
+                    
+                    entry = round(close, 2)
+                    atr_v = float(atr) if not np.isnan(atr) else close * 0.03
+                    
+                    rows.append({
+                        "Ticker": t,
+                        "Harga": entry,
+                        "Change (%)": round(chg, 2),
+                        "Volume": f"{vol/1000000:.2f}M",
+                        "VolRatio": round(vr, 2),
+                        "RSI": round(rsi, 1) if not np.isnan(rsi) else 50,
+                        "Skor": min(score, 99),
+                        "TP": round(entry + 1.5 * atr_v, 2),
+                        "CL": round(entry - 1.0 * atr_v, 2),
+                        "Analisis": " | ".join(notes) if notes else "Netral"
+                    })
+                except Exception:
+                    continue
+            
+            df = pd.DataFrame(rows)
+            
+            if not df.empty:
+                st.success(f"✅ {len(df)} saham under 100 ditemukan!")
+                st.dataframe(df.sort_values("Skor", ascending=False)[
+                    ["Ticker", "Harga", "Change (%)", "Volume", "VolRatio", "RSI", "Skor", "TP", "CL"]],
+                    use_container_width=True)
+                
+                st.warning("⚠️ **PERINGATAN:** Saham under 100 sangat volatil. Gunakan stop loss ketat (3-5%).")
+                
+                for _, r in df.sort_values("Skor", ascending=False).head(20).iterrows():
+                    st.markdown(f"""<div class="deep-card">
+                        <h3>{r['Ticker']} | Skor: <b style="color:#facc15;">{r['Skor']}/99</b></h3>
+                        <p><b>Harga:</b> Rp {r['Harga']:,.2f} ({r['Change (%)']:+.2f}%) | 
+                           <b>Volume:</b> {r['Volume']} | <b>Vol Ratio:</b> {r['VolRatio']}x | 
+                           <b>RSI:</b> {r['RSI']}</p>
+                        <p><b>🎯 TP:</b> Rp {r['TP']:,.2f} | 
+                           <b>🛑 CL:</b> Rp {r['CL']:,.2f}</p>
+                        <p><b>📌 Analisis:</b> {r['Analisis']}</p>
+                    </div>""", unsafe_allow_html=True)
+            else:
+                st.info("😕 Tidak ada saham under 100 yang lolos kriteria hari ini.")
+
+# =========================================================================
+# FOOTER
+# =========================================================================
+
+st.sidebar.markdown("---")
+st.sidebar.caption("""
+🤖 AI Screener v4.0  
+**Sumber:** Yahoo Finance, World Bank, Google News  
+**Disclaimer:** Bukan rekomendasi investasi
+""")
+
+st.markdown("""
+<div class="disclaimer">
+    ⚠️ <b>Disclaimer:</b> Screener ini hanya alat bantu analisis. 
+    Semua keputusan investasi sepenuhnya di tangan Anda.
+</div>
+""", unsafe_allow_html=True)
